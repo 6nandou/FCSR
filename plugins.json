@@ -15,7 +15,7 @@
         "version": 1,
         "internalName": "AnimeId",
         "description": "Proveedor para Animeh",
-        "url": "https://raw.githubusercontent.com/6nandou/FCSR/builds/AnimeId.cs3",
+        "url": "AnimeId.cs3",
         "name": "AnimeId"
     }
 ]
