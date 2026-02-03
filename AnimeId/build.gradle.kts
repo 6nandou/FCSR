@@ -3,7 +3,6 @@ import com.lagradost.cloudstream3.gradle.CloudstreamExtension
 version = 1
 
 cloudstream {
-    name = "AnimeId" 
     authors = listOf("6nandou")
     language = "es"
     description = "Proveedor para Animeh"
