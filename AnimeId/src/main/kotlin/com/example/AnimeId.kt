@@ -67,4 +67,46 @@ class AnimeId : MainAPI() {
 
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.plot = description
-            this.posterUrl = result.selectFirst("meta
+            this.posterUrl = result.selectFirst("meta[property=og:image]")?.attr("content")
+        }
+    }
+
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val res = app.get(data).document
+        
+        // 1. Extraer de servidores externos conocidos (Doodstream, Voe, etc.)
+        res.select("div.embed iframe, div.servers iframe, li[data-id] > a").forEach { element ->
+            val src = if (element.tagName() == "a") element.attr("href") else element.attr("src")
+            if (src.isNotEmpty() && !src.contains("nhplayer")) {
+                loadExtractor(src, data, subtitleCallback, callback)
+            }
+        }
+
+        // 2. Extracción del servidor propio (NH) con Headers reforzados
+        res.select("video source").forEach { source ->
+            val videoUrl = source.attr("src")
+            if (videoUrl.isNotEmpty()) {
+                callback.invoke(
+                    ExtractorLink(
+                        source = this.name,
+                        name = "Directo (NH)",
+                        url = videoUrl,
+                        referer = "$mainUrl/",
+                        quality = Qualities.Unknown.value,
+                        headers = mapOf(
+                            "Referer" to "$mainUrl/",
+                            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+                        )
+                    )
+                )
+            }
+        }
+
+        return true
+    }
+}
