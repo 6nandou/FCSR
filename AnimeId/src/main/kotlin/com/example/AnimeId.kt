@@ -4,6 +4,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.loadExtractor
+import com.lagradost.cloudstream3.utils.newExtractorLink
 
 class AnimeId : MainAPI() {
     override var mainUrl = "https://animeidhentai.com"
@@ -40,7 +41,18 @@ class AnimeId : MainAPI() {
                 this.posterUrl = poster
             })
         }
-        return newHomePageResponse(list, true)
+        
+        // CORRECCIÓN: Usamos la estructura que el compilador exige
+        return newHomePageResponse(
+            listOf(
+                HomePageList(
+                    name = request.name,
+                    list = list,
+                    isHorizontalImages = true
+                )
+            ),
+            hasNext = true
+        )
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
@@ -74,27 +86,26 @@ class AnimeId : MainAPI() {
     ): Boolean {
         val res = app.get(data).document
         
-        // Buscamos iframes de servidores (NHPlayer, etc)
+        // 1. Servidores externos (loadExtractor gestiona el referer automáticamente)
         res.select("div.embed iframe, div.servers iframe").forEach { iframe ->
             val src = iframe.attr("src")
             if (src.isNotEmpty()) {
-                // loadExtractor es la forma oficial de manejar servidores externos sin errores
                 loadExtractor(src, data, subtitleCallback, callback)
             }
         }
 
-        // Intento de link directo si existe en la página
+        // 2. CORRECCIÓN: Link directo usando newExtractorLink (versión moderna)
         res.select("video source").forEach { source ->
             val videoUrl = source.attr("src")
             if (videoUrl.isNotEmpty()) {
                 callback.invoke(
-                    ExtractorLink(
-                        this.name,
-                        "Directo",
-                        videoUrl,
-                        "$mainUrl/",
-                        Qualities.P720.value,
-                        videoUrl.contains(".m3u8")
+                    newExtractorLink(
+                        source = this.name,
+                        name = "Directo",
+                        url = videoUrl,
+                        referer = "$mainUrl/",
+                        quality = Qualities.P720.value,
+                        isM3u8 = videoUrl.contains(".m3u8")
                     )
                 )
             }
