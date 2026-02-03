@@ -85,6 +85,7 @@ class AnimeId : MainAPI() {
     ): Boolean {
         val res = app.get(data).document
         
+        // 1. Servidores externos
         res.select("div.embed iframe, div.servers iframe").forEach { iframe ->
             val src = iframe.attr("src")
             if (src.isNotEmpty()) {
@@ -92,6 +93,7 @@ class AnimeId : MainAPI() {
             }
         }
 
+        // 2. Link directo - Nueva sintaxis de inicializador corregida
         res.select("video source").forEach { source ->
             val videoUrl = source.attr("src")
             if (videoUrl.isNotEmpty()) {
@@ -99,11 +101,12 @@ class AnimeId : MainAPI() {
                     newExtractorLink(
                         this.name,
                         "Directo",
-                        videoUrl,
-                        "$mainUrl/",
-                        Qualities.P720.value,
-                        videoUrl.contains(".m3u8")
-                    )
+                        videoUrl
+                    ) {
+                        this.referer = "$mainUrl/"
+                        this.quality = Qualities.P720.value
+                        this.isM3u8 = videoUrl.contains(".m3u8")
+                    }
                 )
             }
         }
