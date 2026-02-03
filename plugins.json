@@ -1,0 +1,13 @@
+[
+  {
+    "name": "AnimeId",
+    "internalName": "AnimeId",
+    "url": "AnimeId.cs3",
+    "version": 1,
+    "authors": ["6nandou"],
+    "language": "en",
+    "description": "Proveedor para AnimeH",
+    "tvTypes": ["NSFW"],
+    "iconUrl": "https://avatars.githubusercontent.com/u/87620680?v=4"
+  }
+]
