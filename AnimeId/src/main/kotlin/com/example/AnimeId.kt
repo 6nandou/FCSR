@@ -1,8 +1,7 @@
-package com.example
+package com.example // Asegúrate de que esto coincida con tu carpeta src/main/kotlin/com/example
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
@@ -43,13 +42,7 @@ class AnimeId : MainAPI() {
         }
         
         return newHomePageResponse(
-            listOf(
-                HomePageList(
-                    request.name,
-                    list,
-                    isHorizontalImages = true
-                )
-            ),
+            listOf(HomePageList(request.name, list, isHorizontalImages = true)),
             hasNext = true
         )
     }
@@ -85,30 +78,23 @@ class AnimeId : MainAPI() {
     ): Boolean {
         val res = app.get(data).document
         
-        // 1. Extraer de servidores externos conocidos
-        res.select("div.embed iframe, div.servers iframe").forEach { iframe ->
-            val src = iframe.attr("src")
-            if (src.isNotEmpty()) {
+        // Esto busca iframes de servidores externos (Voe, Dood, etc) y los carga automáticamente
+        res.select("div.embed iframe, div.servers iframe, li[data-id] > a").forEach { element ->
+            val src = if (element.tagName() == "a") element.attr("href") else element.attr("src")
+            if (src.isNotEmpty() && !src.contains("nhplayer")) {
                 loadExtractor(src, data, subtitleCallback, callback)
             }
         }
 
-        // 2. Extraer link directo del reproductor de la web
+        // Intento de link directo si existe el tag video
         res.select("video source").forEach { source ->
             val videoUrl = source.attr("src")
             if (videoUrl.isNotEmpty()) {
-                // Usamos newExtractorLink con un bloque de inicialización
-                // Esto evita el warning de 'deprecated' y el error de 'val reassigned'
                 callback.invoke(
-                    newExtractorLink(
-                        source = this.name,
-                        name = "Directo",
-                        url = videoUrl
-                    )
+                    newExtractorLink(this.name, "Directo", videoUrl, "$mainUrl/")
                 )
             }
         }
-
         return true
     }
 }
