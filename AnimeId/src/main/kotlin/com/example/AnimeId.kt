@@ -42,13 +42,7 @@ class AnimeId : MainAPI() {
         }
         
         return newHomePageResponse(
-            listOf(
-                HomePageList(
-                    request.name,
-                    list,
-                    isHorizontalImages = true
-                )
-            ),
+            listOf(HomePageList(request.name, list, isHorizontalImages = true)),
             hasNext = true
         )
     }
@@ -84,7 +78,7 @@ class AnimeId : MainAPI() {
     ): Boolean {
         val res = app.get(data).document
         
-        // 1. Extraer de servidores externos (Voe, Doodstream, etc.)
+        // 1. Servidores externos
         res.select("div.embed iframe, div.servers iframe, li[data-id] > a").forEach { element ->
             val src = if (element.tagName() == "a") element.attr("href") else element.attr("src")
             if (src.isNotEmpty() && !src.contains("nhplayer")) {
@@ -92,7 +86,7 @@ class AnimeId : MainAPI() {
             }
         }
 
-        // 2. Extraer link directo del reproductor (Corregido con parámetros nombrados)
+        // 2. Link directo (Cambiado de 'referer' a 'headers' para evitar error de compilación)
         res.select("video source").forEach { source ->
             val videoUrl = source.attr("src")
             if (videoUrl.isNotEmpty()) {
@@ -101,7 +95,7 @@ class AnimeId : MainAPI() {
                         source = this.name,
                         name = "Directo",
                         url = videoUrl,
-                        referer = "$mainUrl/"
+                        headers = mapOf("Referer" to "$mainUrl/")
                     )
                 )
             }
