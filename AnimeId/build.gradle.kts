@@ -4,7 +4,7 @@ version = 1
 
 cloudstream {
     authors = listOf("6nandou")
-    language = "es"
+    language = "en"
     description = "Proveedor para Animeh"
     status = 1
     tvTypes = listOf("NSFW")
