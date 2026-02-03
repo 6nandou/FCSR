@@ -44,7 +44,7 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/src
           chmod +x gradlew
-          # 1. Generar los archivos
+          # 1. Generar
           ./gradlew make makePluginsJson --stacktrace
           
           # 2. Corregir la URL en el JSON automáticamente para que sea relativa
