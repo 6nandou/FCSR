@@ -36,10 +36,10 @@ jobs:
       - name: Collect Files for Deployment
         run: |
           mkdir -p deploy
-<<<<<<< HEAD
-          # Busca el archivo .cs3 dentro de la carpeta AnimeId
-          find AnimeId/build/ -name "*.cs3" -exec cp {} deploy/AnimeId.cs3 \;
+          # Busca el archivo .cs3 y lo renombra correctamente en deploy
+          find . -name "*.cs3" -exec cp {} deploy/AnimeId.cs3 \;
           
+          # Genera el archivo plugins.json limpio
           echo '[
             {
               "name": "AnimeId",
@@ -48,31 +48,13 @@ jobs:
               "version": 1,
               "authors": ["6nandou"],
               "language": "es",
-              "description": "Animeh",
-=======
-          # Busca el archivo compilado .cs3 y lo mueve a deploy
-          find . -name "*.cs3" -exec cp {} deploy/ \;
-          
-          # Genera el archivo plugins.json necesario para Cloudstream
-          echo '[
-            {
-              "name": "AnimeIdHentai",
-              "url": "ExampleProvider.cs3",
-              "version": 1,
-              "authors": ["6nandou"],
-              "language": "es",
-              "description": "Anime",
->>>>>>> 7c20cef81b457fc3c41e0ccb465d2ed99ca617f8
+              "description": "Proveedor para AnimeIdHentai",
               "tvTypes": ["NSFW"],
               "iconUrl": "https://avatars.githubusercontent.com/u/87620680?v=4"
             }
           ]' > deploy/plugins.json
 
-<<<<<<< HEAD
           echo "Archivos en deploy:"
-=======
-          echo "Contenido de la carpeta deploy:"
->>>>>>> 7c20cef81b457fc3c41e0ccb465d2ed99ca617f8
           ls -R deploy
 
       - name: Deploy to Builds Branch
@@ -81,8 +63,4 @@ jobs:
           folder: deploy
           branch: builds
           clean: true
-<<<<<<< HEAD
           target-folder: .
-=======
-          target-folder: .
->>>>>>> 7c20cef81b457fc3c41e0ccb465d2ed99ca617f8
