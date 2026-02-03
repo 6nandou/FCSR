@@ -1,0 +1,9 @@
+{
+    "name": "Feña CloudStream Repo",
+    "iconUrl": "https://avatars.githubusercontent.com/u/87620680?v=4",
+    "description": "Repositorio personal",
+    "manifestVersion": 1,
+    "pluginLists": [
+      "https://raw.githubusercontent.com/6nandou/FCSR/builds/plugins.json"
+    ]
+}
