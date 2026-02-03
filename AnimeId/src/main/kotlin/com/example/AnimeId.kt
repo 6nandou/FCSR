@@ -3,6 +3,7 @@ package com.example
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
+import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 
 class AnimeId : MainAPI() {
@@ -79,7 +80,7 @@ class AnimeId : MainAPI() {
     ): Boolean {
         val res = app.get(data).document
         
-        // 1. Extraer de servidores externos conocidos (Doodstream, Voe, etc.)
+        // 1. Intentar cargar servidores externos si existen (Dood, Voe, etc.)
         res.select("div.embed iframe, div.servers iframe, li[data-id] > a").forEach { element ->
             val src = if (element.tagName() == "a") element.attr("href") else element.attr("src")
             if (src.isNotEmpty() && !src.contains("nhplayer")) {
@@ -87,24 +88,21 @@ class AnimeId : MainAPI() {
             }
         }
 
-        // 2. Extracción del servidor propio (NH) con Headers reforzados
-        res.select("video source").forEach { source ->
-            val videoUrl = source.attr("src")
-            if (videoUrl.isNotEmpty()) {
-                callback.invoke(
-                    ExtractorLink(
-                        source = this.name,
-                        name = "Directo (NH)",
-                        url = videoUrl,
-                        referer = "$mainUrl/",
-                        quality = Qualities.Unknown.value,
-                        headers = mapOf(
-                            "Referer" to "$mainUrl/",
-                            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
-                        )
-                    )
-                )
-            }
+        // 2. Extraer el video principal usando el ID específico
+        // Esto captura el atributo 'src' directamente del tag 'video'
+        val videoElement = res.selectFirst("video#myPlayer_html5_api") ?: res.selectFirst("video[src*=.mp4]")
+        val videoUrl = videoElement?.attr("src")
+        
+        if (!videoUrl.isNullOrEmpty()) {
+            // Usamos newExtractorLink para evitar el error de compilación (deprecated)
+            val link = newExtractorLink(
+                this.name,
+                "Directo (NH)",
+                videoUrl
+            )
+            // Asignamos el referer manualmente para saltar la protección del servidor R2
+            link.referer = "$mainUrl/"
+            callback.invoke(link)
         }
 
         return true
