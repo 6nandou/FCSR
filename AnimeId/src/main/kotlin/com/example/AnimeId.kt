@@ -86,19 +86,19 @@ class AnimeId : MainAPI() {
             }
         }
 
-        // 2. Link directo - Corregido para evitar errores de deprecación y tipos
+        // 2. Link directo - Usando 'apply' para evitar errores de parámetros en la función
         res.select("video source").forEach { source ->
             val videoUrl = source.attr("src")
             if (videoUrl.isNotEmpty()) {
-                callback.invoke(
-                    newExtractorLink(
-                        source = this.name,
-                        name = "Directo",
-                        url = videoUrl,
-                        referer = "$mainUrl/",
-                        quality = 0 // 0 equivale a calidad desconocida/automática
-                    )
+                val link = newExtractorLink(
+                    this.name,
+                    "Directo",
+                    videoUrl
                 )
+                // Asignamos el referer manualmente al objeto creado
+                link.referer = "$mainUrl/"
+                
+                callback.invoke(link)
             }
         }
 
