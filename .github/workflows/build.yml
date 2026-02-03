@@ -44,13 +44,15 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/src
           chmod +x gradlew
-          # Compila el plugin y genera el JSON automáticamente
+          # 1. Generar los archivos
           ./gradlew make makePluginsJson --stacktrace
           
-          # Copia los archivos .cs3 a la carpeta de builds
-          cp **/build/*.cs3 $GITHUB_WORKSPACE/builds/ || true
+          # 2. Corregir la URL en el JSON automáticamente para que sea relativa
+          # Buscamos el plugins.json y quitamos toda la parte de la URL de GitHub
+          find . -name "plugins.json" -exec sed -i 's|https://raw.githubusercontent.com/[^"]*/||g' {} \;
           
-          # Busca el plugins.json generado y lo mueve a builds
+          # 3. Mover los archivos a la carpeta de despliegue
+          cp **/build/*.cs3 $GITHUB_WORKSPACE/builds/ || true
           find . -name "plugins.json" -exec cp {} $GITHUB_WORKSPACE/builds/ \;
 
       - name: Push to Builds Branch
@@ -59,6 +61,5 @@ jobs:
           git config --local user.email "actions@github.com"
           git config --local user.name "GitHub Actions"
           git add .
-          # Si no hay cambios, no da error
           git commit -m "Build $GITHUB_SHA" || exit 0
           git push --force origin builds
