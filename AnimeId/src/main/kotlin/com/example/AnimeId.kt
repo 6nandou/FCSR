@@ -1,4 +1,4 @@
-package com.example // Asegúrate de que esto coincida con tu carpeta src/main/kotlin/com/example
+package com.example
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -42,7 +42,13 @@ class AnimeId : MainAPI() {
         }
         
         return newHomePageResponse(
-            listOf(HomePageList(request.name, list, isHorizontalImages = true)),
+            listOf(
+                HomePageList(
+                    request.name,
+                    list,
+                    isHorizontalImages = true
+                )
+            ),
             hasNext = true
         )
     }
@@ -78,7 +84,7 @@ class AnimeId : MainAPI() {
     ): Boolean {
         val res = app.get(data).document
         
-        // Esto busca iframes de servidores externos (Voe, Dood, etc) y los carga automáticamente
+        // 1. Extraer de servidores externos (Voe, Doodstream, etc.)
         res.select("div.embed iframe, div.servers iframe, li[data-id] > a").forEach { element ->
             val src = if (element.tagName() == "a") element.attr("href") else element.attr("src")
             if (src.isNotEmpty() && !src.contains("nhplayer")) {
@@ -86,15 +92,21 @@ class AnimeId : MainAPI() {
             }
         }
 
-        // Intento de link directo si existe el tag video
+        // 2. Extraer link directo del reproductor (Corregido con parámetros nombrados)
         res.select("video source").forEach { source ->
             val videoUrl = source.attr("src")
             if (videoUrl.isNotEmpty()) {
                 callback.invoke(
-                    newExtractorLink(this.name, "Directo", videoUrl, "$mainUrl/")
+                    newExtractorLink(
+                        source = this.name,
+                        name = "Directo",
+                        url = videoUrl,
+                        referer = "$mainUrl/"
+                    )
                 )
             }
         }
+
         return true
     }
 }
