@@ -78,7 +78,7 @@ class AnimeId : MainAPI() {
     ): Boolean {
         val res = app.get(data).document
         
-        // 1. Servidores externos (loadExtractor suele ser muy estable entre versiones)
+        // 1. Servidores externos
         res.select("div.embed iframe, div.servers iframe, li[data-id] > a").forEach { element ->
             val src = if (element.tagName() == "a") element.attr("href") else element.attr("src")
             if (src.isNotEmpty() && !src.contains("nhplayer")) {
@@ -86,17 +86,17 @@ class AnimeId : MainAPI() {
             }
         }
 
-        // 2. Link directo - Usando sintaxis posicional básica para evitar errores de nombres
+        // 2. Link directo - Corregido para evitar errores de deprecación y tipos
         res.select("video source").forEach { source ->
             val videoUrl = source.attr("src")
             if (videoUrl.isNotEmpty()) {
                 callback.invoke(
-                    ExtractorLink(
-                        this.name,
-                        "Directo",
-                        videoUrl,
-                        "$mainUrl/",
-                        Qualities.Unknown.value
+                    newExtractorLink(
+                        source = this.name,
+                        name = "Directo",
+                        url = videoUrl,
+                        referer = "$mainUrl/",
+                        quality = 0 // 0 equivale a calidad desconocida/automática
                     )
                 )
             }
