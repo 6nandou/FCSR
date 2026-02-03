@@ -85,7 +85,7 @@ class AnimeId : MainAPI() {
     ): Boolean {
         val res = app.get(data).document
         
-        // 1. Extraer de servidores externos
+        // 1. Extraer de servidores externos conocidos
         res.select("div.embed iframe, div.servers iframe").forEach { iframe ->
             val src = iframe.attr("src")
             if (src.isNotEmpty()) {
@@ -93,18 +93,17 @@ class AnimeId : MainAPI() {
             }
         }
 
-        // 2. Link directo (Usando constructor con nombres de parámetros internos correctos)
+        // 2. Extraer link directo del reproductor de la web
         res.select("video source").forEach { source ->
             val videoUrl = source.attr("src")
             if (videoUrl.isNotEmpty()) {
+                // Usamos newExtractorLink con un bloque de inicialización
+                // Esto evita el warning de 'deprecated' y el error de 'val reassigned'
                 callback.invoke(
-                    ExtractorLink(
+                    newExtractorLink(
                         source = this.name,
                         name = "Directo",
-                        url = videoUrl,
-                        referer = "$mainUrl/",
-                        quality = Qualities.P720.value,
-                        isM3u8 = videoUrl.contains(".m3u8")
+                        url = videoUrl
                     )
                 )
             }
