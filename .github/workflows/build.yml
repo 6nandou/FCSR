@@ -1,65 +1,62 @@
 name: Build and Deploy
 
-concurrency:
-  group: "build"
-  cancel-in-progress: true
-
 on:
   push:
     branches:
-      - main
       - master
-    paths-ignore:
-      - '*.md'
+      - main
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Source
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          path: "src"
+          fetch-depth: 0
 
-      - name: Checkout Builds Branch
-        uses: actions/checkout@v4
-        with:
-          ref: "builds"
-          path: "builds"
-
-      - name: Clean Old Builds
-        run: rm -f $GITHUB_WORKSPACE/builds/*.cs3 || true
-
-      - name: Setup JDK 17
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: "temurin"
-          java-version: "17"
+          java-version: '17'
+          distribution: 'temurin'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
       - name: Build Plugins
         run: |
-          cd $GITHUB_WORKSPACE/src
-          chmod +x gradlew
-          # 1. Generar
+          # Limpiar compilaciones previas
+          ./gradlew clean
+          
+          # Compilar los plugins y generar el JSON
           ./gradlew make makePluginsJson --stacktrace
-          
-          # 2. Corregir la URL en el JSON automáticamente para que sea relativa
-          # Buscamos el plugins.json y quitamos toda la parte de la URL de GitHub
-          find . -name "plugins.json" -exec sed -i 's|https://raw.githubusercontent.com/[^"]*/||g' {} \;
-          
-          # 3. Mover los archivos a la carpeta de despliegue
-          cp **/build/*.cs3 $GITHUB_WORKSPACE/builds/ || true
-          find . -name "plugins.json" -exec cp {} $GITHUB_WORKSPACE/builds/ \;
 
-      - name: Push to Builds Branch
+      - name: Prepare Artifacts
         run: |
-          cd $GITHUB_WORKSPACE/builds
-          git config --local user.email "actions@github.com"
-          git config --local user.name "GitHub Actions"
-          git add .
-          git commit -m "Build $GITHUB_SHA" || exit 0
-          git push --force origin builds
+          mkdir -p builds
+          
+          # Copiar los archivos .cs3 generados a la carpeta builds
+          find . -name "*.cs3" -exec cp {} builds/ \;
+          
+          # Copiar el plugins.json generado
+          find . -name "plugins.json" -exec cp {} builds/ \;
+          
+          # IMPORTANTE: Corregir el JSON para que la App pueda descargar los archivos
+          # Esto cambia la URL relativa por una URL absoluta de GitHub
+          cd builds
+          sed -i "s|\"url\": \"AnimeId.cs3\"|\"url\": \"https://raw.githubusercontent.com/${{ github.repository }}/builds/AnimeId.cs3\"|g" plugins.json
+          
+          # Opcional: Si tienes un icono, asegúrate de que la URL del icono también sea correcta
+          # sed -i "s|\"iconUrl\": \"icon.png\"|\"iconUrl\": \"https://raw.githubusercontent.com/${{ github.repository }}/builds/icon.png\"|g" plugins.json
+
+      - name: Deploy to builds branch
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: builds
+          branch: builds
+          clean: true
