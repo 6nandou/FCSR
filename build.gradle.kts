@@ -67,17 +67,17 @@ subprojects {
     }
 
     dependencies {
-        val cloudstream by configurations
-        val implementation by configurations
+    val cloudstream by configurations
+    val implementation by configurations
 
-        // Usando la versión solicitada
-        cloudstream("com.lagradost:cloudstream3:pre-release")
+    // Corregido: El grupo debe ser com.github.recloudstream
+    cloudstream("com.github.recloudstream:cloudstream:pre-release") 
 
-        implementation(kotlin("stdlib"))
-        implementation("com.github.Blatzar:NiceHttp:0.4.11")
-        implementation("org.jsoup:jsoup:1.18.3")
-        implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.18.2")
-    }
+    implementation(kotlin("stdlib"))
+    implementation("com.github.Blatzar:NiceHttp:0.4.11")
+    implementation("org.jsoup:jsoup:1.18.3")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.18.2")
+}
 }
 
 task<Delete>("clean") {
