@@ -5,6 +5,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.base64ToText
 
 class AnimeId : MainAPI() {
     override var mainUrl = "https://animeidhentai.com"
@@ -80,29 +81,38 @@ class AnimeId : MainAPI() {
     ): Boolean {
         val res = app.get(data).document
         
-        // 1. Intentar cargar servidores externos si existen (Dood, Voe, etc.)
-        res.select("div.embed iframe, div.servers iframe, li[data-id] > a").forEach { element ->
-            val src = if (element.tagName() == "a") element.attr("href") else element.attr("src")
-            if (src.isNotEmpty() && !src.contains("nhplayer")) {
-                loadExtractor(src, data, subtitleCallback, callback)
+        // 1. Decodificar el servidor propio (NHPlayer) mediante Base64
+        // Este método salta anuncios y obtiene el link directo con token
+        res.select("li[data-id*=/player.php?vid=]").forEach { element ->
+            val rawId = element.attr("data-id")
+            val base64Part = rawId.substringAfter("vid=").substringBefore("&")
+            
+            try {
+                // Decodificamos y limpiamos la URL (quitamos el timestamp tras el '|')
+                val decodedUrl = base64ToText(base64Part).substringBefore("|")
+                
+                if (decodedUrl.startsWith("http")) {
+                    callback.invoke(
+                        newExtractorLink(
+                            this.name,
+                            "Directo (NH)",
+                            decodedUrl
+                        ).apply {
+                            this.referer = "https://nhplayer.com/"
+                        }
+                    )
+                }
+            } catch (e: Exception) {
+                // En caso de error en decodificación, no rompemos el proceso
             }
         }
 
-        // 2. Extraer el video principal usando el ID específico
-        // Esto captura el atributo 'src' directamente del tag 'video'
-        val videoElement = res.selectFirst("video#myPlayer_html5_api") ?: res.selectFirst("video[src*=.mp4]")
-        val videoUrl = videoElement?.attr("src")
-        
-        if (!videoUrl.isNullOrEmpty()) {
-            // Usamos newExtractorLink para evitar el error de compilación (deprecated)
-            val link = newExtractorLink(
-                this.name,
-                "Directo (NH)",
-                videoUrl
-            )
-            // Asignamos el referer manualmente para saltar la protección del servidor R2
-            link.referer = "$mainUrl/"
-            callback.invoke(link)
+        // 2. Extraer servidores externos (Doodstream, Voe, etc.)
+        res.select("div.embed iframe, div.servers iframe").forEach { element ->
+            val src = element.attr("src")
+            if (src.isNotEmpty() && !src.contains("nhplayer")) {
+                loadExtractor(src, data, subtitleCallback, callback)
+            }
         }
 
         return true
