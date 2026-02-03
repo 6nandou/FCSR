@@ -25,7 +25,7 @@ configure<CloudstreamExtension> {
     // Al no poner setMetadata, el plugin busca 'provider.json' 
     // automáticamente en la carpeta del proyecto.
     authors = listOf("6nandou")
-    language = "es"
+    language = "en"
     description = "Proveedor para AnimeIdHentai"
 }
 
