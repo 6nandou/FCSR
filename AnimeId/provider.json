@@ -4,7 +4,7 @@
   "author": "6nandou",
   "description": "Provider for AnimeId",
   "language": "en",
-  "version": 101,
+  "version": 110,
   "tvTypes": ["NSFW"],
   "itemType": "Anime"
 }
