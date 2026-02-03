@@ -4,7 +4,6 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.loadExtractor
-import com.lagradost.cloudstream3.utils.newExtractorLink
 
 class AnimeId : MainAPI() {
     override var mainUrl = "https://animeidhentai.com"
@@ -42,12 +41,11 @@ class AnimeId : MainAPI() {
             })
         }
         
-        // CORRECCIÓN: Usamos la estructura que el compilador exige
         return newHomePageResponse(
             listOf(
                 HomePageList(
-                    name = request.name,
-                    list = list,
+                    request.name,
+                    list,
                     isHorizontalImages = true
                 )
             ),
@@ -86,7 +84,7 @@ class AnimeId : MainAPI() {
     ): Boolean {
         val res = app.get(data).document
         
-        // 1. Servidores externos (loadExtractor gestiona el referer automáticamente)
+        // 1. Servidores externos
         res.select("div.embed iframe, div.servers iframe").forEach { iframe ->
             val src = iframe.attr("src")
             if (src.isNotEmpty()) {
@@ -94,12 +92,12 @@ class AnimeId : MainAPI() {
             }
         }
 
-        // 2. CORRECCIÓN: Link directo usando newExtractorLink (versión moderna)
+        // 2. Link directo - Corregido para evitar errores de parámetros
         res.select("video source").forEach { source ->
             val videoUrl = source.attr("src")
             if (videoUrl.isNotEmpty()) {
                 callback.invoke(
-                    newExtractorLink(
+                    ExtractorLink(
                         source = this.name,
                         name = "Directo",
                         url = videoUrl,
