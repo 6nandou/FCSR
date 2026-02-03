@@ -14,14 +14,15 @@ class AnimeId : MainAPI() {
 
     override val mainPage = mainPageOf(
         "trending" to "Trending Hentai",
-        "genre/censored" to "Censored Hentai",
         "genre/hentai-uncensored" to "Uncensored Hentai",
+        "genre/censored" to "Censored Hentai",
         "genre/incest" to "Incest Hentai",
         "genre/hd" to "HD Hentai",
         "genre/maid" to "Maid Hentai",
-        "genre/monster" to "Monster Hentai",
-        "genre/female-student" to "Female Student Hentai",
-        "genre/tentacle" to "Tentacle Hentai",
+        "genre/school-girl" to "Schoolgirl Hentai",
+        "genre/virgin" to "Virgin Hentai",
+        "genre/anal" to "Anal Hentai",
+        "genre/nudity" to "Nudity Hentai",
     )
 
     override suspend fun getMainPage(
