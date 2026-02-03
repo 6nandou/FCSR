@@ -39,7 +39,6 @@ jobs:
           # Busca el archivo .cs3 y lo renombra correctamente en deploy
           find . -name "*.cs3" -exec cp {} deploy/AnimeId.cs3 \;
           
-          # Genera el archivo plugins.json limpio
           echo '[
             {
               "name": "AnimeId",
@@ -47,7 +46,7 @@ jobs:
               "url": "AnimeId.cs3",
               "version": 1,
               "authors": ["6nandou"],
-              "language": "es",
+              "language": "en",
               "description": "Proveedor para AnimeIdHentai",
               "tvTypes": ["NSFW"],
               "iconUrl": "https://avatars.githubusercontent.com/u/87620680?v=4"
