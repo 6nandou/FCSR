@@ -1,16 +1,20 @@
 [
     {
+        "iconUrl": "https://6nandou.github.io/assets/katana.png",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/6nandou/FCSR",
         "fileSize": 9739,
-        "status": 3,
+        "status": 1,
         "language": "en",
         "authors": [
             "6nandou"
         ],
+        "tvTypes": [
+            "NSFW"
+        ],
         "version": -1,
         "internalName": "AnimeId",
-        "description": "Provider for AnimeIdHentai",
+        "description": "animeh",
         "url": "https://raw.githubusercontent.com/6nandou/FCSR/builds/AnimeId.cs3",
         "name": "AnimeId"
     }
