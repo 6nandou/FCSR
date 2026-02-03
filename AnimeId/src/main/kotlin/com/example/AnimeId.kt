@@ -78,7 +78,7 @@ class AnimeId : MainAPI() {
     ): Boolean {
         val res = app.get(data).document
         
-        // 1. Servidores externos
+        // 1. Extraer de servidores externos (Dood, Voe, etc.)
         res.select("div.embed iframe, div.servers iframe, li[data-id] > a").forEach { element ->
             val src = if (element.tagName() == "a") element.attr("href") else element.attr("src")
             if (src.isNotEmpty() && !src.contains("nhplayer")) {
@@ -86,7 +86,7 @@ class AnimeId : MainAPI() {
             }
         }
 
-        // 2. Link directo - Usando 'apply' para evitar errores de parámetros en la función
+        // 2. Extraer link directo con Referer para corregir error de reproducción
         res.select("video source").forEach { source ->
             val videoUrl = source.attr("src")
             if (videoUrl.isNotEmpty()) {
@@ -95,9 +95,8 @@ class AnimeId : MainAPI() {
                     "Directo",
                     videoUrl
                 )
-                // Asignamos el referer manualmente al objeto creado
-                link.referer = "$mainUrl/"
-                
+                // Esto engaña al servidor para permitir la reproducción
+                link.referer = "$mainUrl/" 
                 callback.invoke(link)
             }
         }
