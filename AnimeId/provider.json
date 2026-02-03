@@ -1,8 +1,8 @@
 {
-  "name": "Animeld",
-  "className": "Animeld",
+  "name": "AnimeId",
+  "className": "AnimeId",
   "author": "6nandou",
-  "description": "Provider for AnimeldHentai",
+  "description": "Provider for AnimeIdHentai",
   "language": "en",
   "version": 220,
   "tvTypes": ["NSFW"],
