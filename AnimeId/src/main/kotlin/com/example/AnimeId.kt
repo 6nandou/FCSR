@@ -4,6 +4,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.loadExtractor
+import com.lagradost.cloudstream3.utils.newExtractorLink
 
 class AnimeId : MainAPI() {
     override var mainUrl = "https://animeidhentai.com"
@@ -95,7 +96,7 @@ class AnimeId : MainAPI() {
             val videoUrl = source.attr("src")
             if (videoUrl.isNotEmpty()) {
                 callback.invoke(
-                    ExtractorLink(
+                    newExtractorLink(
                         this.name,
                         "Directo",
                         videoUrl,
