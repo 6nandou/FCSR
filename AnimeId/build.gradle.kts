@@ -1,10 +1,15 @@
 import com.lagradost.cloudstream3.gradle.CloudstreamExtension
 
-// NO apliques plugins aquí, ya se aplican en la raíz (subprojects)
-// NO definas dependencias aquí, ya están en la raíz
-
 cloudstream {
+    // Esto llenará correctamente el plugins.json
     authors = listOf("6nandou")
     language = "en"
     description = "Provider for AnimeIdHentai"
+    
+    // Forzamos que el nombre en la lista sea el correcto
+    setMetadata(
+        "name" to "AnimeIdHentai",
+        "version" to 190,
+        "tvTypes" to listOf("NSFW")
+    )
 }
