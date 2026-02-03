@@ -2,9 +2,9 @@
   "name": "AnimeIdHentai",
   "className": "AnimeId", 
   "author": "6nandou",
-  "description": "Proveedor de AnimeId",
-  "language": "es",
-  "version": 100,
+  "description": "Provider for AnimeId",
+  "language": "en",
+  "version": 101,
   "tvTypes": ["NSFW"],
   "itemType": "Anime"
 }
