@@ -5,7 +5,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
-import com.lagradost.cloudstream3.base64ToText
+import android.util.Base64
 
 class AnimeId : MainAPI() {
     override var mainUrl = "https://animeidhentai.com"
@@ -81,15 +81,18 @@ class AnimeId : MainAPI() {
     ): Boolean {
         val res = app.get(data).document
         
-        // 1. Decodificar el servidor propio (NHPlayer) mediante Base64
-        // Este método salta anuncios y obtiene el link directo con token
+        // 1. Decodificar el servidor propio (NHPlayer) mediante Base64 nativo de Android
         res.select("li[data-id*=/player.php?vid=]").forEach { element ->
             val rawId = element.attr("data-id")
             val base64Part = rawId.substringAfter("vid=").substringBefore("&")
             
             try {
-                // Decodificamos y limpiamos la URL (quitamos el timestamp tras el '|')
-                val decodedUrl = base64ToText(base64Part).substringBefore("|")
+                // Usamos la librería nativa de Android para decodificar
+                val decodedBytes = Base64.decode(base64Part, Base64.DEFAULT)
+                val decodedString = String(decodedBytes, Charsets.UTF_8)
+                
+                // Limpiamos la URL (quitamos el timestamp tras el '|')
+                val decodedUrl = decodedString.substringBefore("|")
                 
                 if (decodedUrl.startsWith("http")) {
                     callback.invoke(
@@ -103,7 +106,7 @@ class AnimeId : MainAPI() {
                     )
                 }
             } catch (e: Exception) {
-                // En caso de error en decodificación, no rompemos el proceso
+                // Error silencioso para no detener otros extractores
             }
         }
 
