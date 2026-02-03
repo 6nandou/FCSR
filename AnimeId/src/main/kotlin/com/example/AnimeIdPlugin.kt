@@ -5,10 +5,8 @@ import com.lagradost.cloudstream3.plugins.Plugin
 import android.content.Context
 
 @CloudstreamPlugin
-class ExamplePlugin: Plugin() {
+class AnimeIdPlugin: Plugin() {
     override fun load(context: Context) {
-        // Todos los providers (como AnimeId) deben registrarse aquí
-        // para que la aplicación los pueda ver.
         registerMainAPI(AnimeId())
     }
 }
