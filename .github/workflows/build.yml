@@ -1,65 +1,64 @@
 name: Build and Deploy
 
+concurrency:
+  group: "build"
+  cancel-in-progress: true
+
 on:
   push:
     branches:
       - main
+      - master
+    paths-ignore:
+      - '*.md'
   workflow_dispatch:
-
-permissions:
-  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
+      - name: Checkout Source
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          path: "src"
 
-      - name: Set up JDK 17
+      - name: Checkout Builds Branch
+        uses: actions/checkout@v4
+        with:
+          ref: "builds"
+          path: "builds"
+
+      - name: Clean Old Builds
+        run: rm -f $GITHUB_WORKSPACE/builds/*.cs3 || true
+
+      - name: Setup JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
+          distribution: "temurin"
+          java-version: "17"
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Build with Gradle
+      - name: Build Plugins
         run: |
+          cd $GITHUB_WORKSPACE/src
           chmod +x gradlew
-          ./gradlew make --stacktrace
-
-      - name: Collect Files for Deployment
-        run: |
-          mkdir -p deploy
-          # Busca el archivo .cs3 y lo renombra correctamente en deploy
-          find . -name "*.cs3" -exec cp {} deploy/AnimeId.cs3 \;
+          # Compila el plugin y genera el JSON automáticamente
+          ./gradlew make makePluginsJson --stacktrace
           
-          echo '[
-            {
-              "name": "AnimeId",
-              "internalName": "AnimeId",
-              "url": "AnimeId.cs3",
-              "version": 1,
-              "authors": ["6nandou"],
-              "language": "en",
-              "description": "Proveedor para AnimeH",
-              "tvTypes": ["NSFW"],
-              "iconUrl": "https://avatars.githubusercontent.com/u/87620680?v=4"
-            }
-          ]' > deploy/plugins.json
+          # Copia los archivos .cs3 a la carpeta de builds
+          cp **/build/*.cs3 $GITHUB_WORKSPACE/builds/ || true
+          
+          # Busca el plugins.json generado y lo mueve a builds
+          find . -name "plugins.json" -exec cp {} $GITHUB_WORKSPACE/builds/ \;
 
-          echo "Archivos en deploy:"
-          ls -R deploy
-
-      - name: Deploy to Builds Branch
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          folder: deploy
-          branch: builds
-          clean: true
-          target-folder: .
+      - name: Push to Builds Branch
+        run: |
+          cd $GITHUB_WORKSPACE/builds
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git add .
+          # Si no hay cambios, no da error
+          git commit -m "Build $GITHUB_SHA" || exit 0
+          git push --force origin builds
