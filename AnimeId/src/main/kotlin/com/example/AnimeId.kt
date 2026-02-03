@@ -1,82 +1,68 @@
 package com.example
 
-import android.util.Log
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.mvvm.logError
 import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.newExtractorLink
+import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.loadExtractor
 
-class AnimeId : MainAPI() { // Cambiado a AnimeId
+class AnimeId : MainAPI() {
     override var mainUrl = "https://animeidhentai.com"
     override var name = "AnimeIdHentai"
     override val hasQuickSearch = false
     override val hasMainPage = true
-    override val supportedTypes = setOf(
-        TvType.NSFW
-    )
+    override val supportedTypes = setOf(TvType.NSFW)
 
-    override val mainPage =
-        mainPageOf(
-            "trending" to "Trending Hentai",
-            "genre/censored" to "Censored Hentai",
-            "genre/hentai-uncensored" to "Uncensored Hentai",
-            "genre/incest" to "Incest Hentai",
-            "genre/hd" to "HD Hentai",
-            "genre/maid" to "Maid Hentai",
-            "genre/monster" to "Monster Hentai",
-            "genre/female-student" to "Female Student Hentai",
-            "genre/tentacle" to "Tentacle Hentai",
-        )
+    override val mainPage = mainPageOf(
+        "trending" to "Trending Hentai",
+        "genre/censored" to "Censored Hentai",
+        "genre/hentai-uncensored" to "Uncensored Hentai",
+        "genre/incest" to "Incest Hentai",
+        "genre/hd" to "HD Hentai",
+        "genre/maid" to "Maid Hentai",
+        "genre/monster" to "Monster Hentai",
+        "genre/female-student" to "Female Student Hentai",
+        "genre/tentacle" to "Tentacle Hentai",
+    )
 
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
     ): HomePageResponse? {
         val list = mutableListOf<AnimeSearchResponse>()
-        val res = app.get("$mainUrl/${request.data}/page/$page").document
+        val pagedUrl = if (page <= 1) "$mainUrl/${request.data}/" else "$mainUrl/${request.data}/page/$page/"
+        val res = app.get(pagedUrl).document
+        
         res.select("article.anime.poster.por").mapNotNull { article ->
-            val name = article.selectFirst("header > div.ttl")?.text() ?: ""
+            val title = article.selectFirst("header > div.ttl")?.text() ?: ""
             val poster = article.selectFirst("img")?.attr("src")
             val url = article.selectFirst("a.lnk-blk")?.attr("href") ?: ""
-            list.add(newAnimeSearchResponse(name, url)
-            {
+            list.add(newAnimeSearchResponse(title, url) {
                 this.posterUrl = poster
             })
         }
-        return newHomePageResponse(
-            list = HomePageList(
-                name = request.name,
-                list = list,
-                isHorizontalImages = true
-            ),
-            hasNext = true
-        )
+        return newHomePageResponse(list, true)
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
         val url = "$mainUrl/?s=${query}"
         return app.get(url).document.select("article.anime.poster.por").mapNotNull { article ->
-            val name = article.selectFirst("header > div.ttl")?.text() ?: ""
+            val title = article.selectFirst("header > div.ttl")?.text() ?: ""
             val poster = article.selectFirst("img")?.attr("src")
-            val url = article.selectFirst("a.lnk-blk")?.attr("href") ?: ""
-            newAnimeSearchResponse(name, url) {
-                posterUrl = poster
+            val href = article.selectFirst("a.lnk-blk")?.attr("href") ?: ""
+            newAnimeSearchResponse(title, href) {
+                this.posterUrl = poster
             }
         }
     }
 
     override suspend fun load(url: String): LoadResponse {
         val result = app.get(url).document
-        val background = result.selectFirst("div.backdrop")?.attr("style")?.substringAfter("url('")
-                ?.replace("')", "")
         val description = result.selectFirst("div.description > p")?.text()
-        val name = result.selectFirst("header.anime-hd h1.ttl")?.text() ?: ""
+        val title = result.selectFirst("header.anime-hd h1.ttl")?.text() ?: ""
 
-        return newMovieLoadResponse(name, url, TvType.NSFW, url) {
-            this.backgroundPosterUrl =
-                if (background.isNullOrEmpty()) result.selectFirst("meta[property=og:image]")
-                    ?.attr("content")?.trim() else background
+        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.plot = description
+            this.posterUrl = result.selectFirst("meta[property=og:image]")?.attr("content")
         }
     }
 
@@ -87,42 +73,33 @@ class AnimeId : MainAPI() { // Cambiado a AnimeId
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val res = app.get(data).document
-        val iframe = res.selectFirst("div.embed > iframe")?.attr("src") ?: ""
-        val playerurl = extractplayer(iframe) ?: ""
-        val sourceurl = extractsource(playerurl) ?:""
-        val subtitle = extractsubtitles(playerurl) ?:""
-        try {
-            callback.invoke(
-                newExtractorLink(
-                    source = this.name,
-                    name = this.name,
-                    url = sourceurl,
-                )
-            )
-        } catch (e: Exception) {
-            logError(e)
+        
+        // Buscamos iframes de servidores (NHPlayer, etc)
+        res.select("div.embed iframe, div.servers iframe").forEach { iframe ->
+            val src = iframe.attr("src")
+            if (src.isNotEmpty()) {
+                // loadExtractor es la forma oficial de manejar servidores externos sin errores
+                loadExtractor(src, data, subtitleCallback, callback)
+            }
         }
-        subtitleCallback.invoke(
-            SubtitleFile("eng", subtitle)
-        )
+
+        // Intento de link directo si existe en la página
+        res.select("video source").forEach { source ->
+            val videoUrl = source.attr("src")
+            if (videoUrl.isNotEmpty()) {
+                callback.invoke(
+                    ExtractorLink(
+                        this.name,
+                        "Directo",
+                        videoUrl,
+                        "$mainUrl/",
+                        Qualities.P720.value,
+                        videoUrl.contains(".m3u8")
+                    )
+                )
+            }
+        }
+
         return true
-    }
-
-    suspend fun extractplayer(url: String): String? {
-        val iframes = app.get(url).document
-        return iframes.selectFirst("div.servers li")?.attr("data-id") ?: ""
-    }
-
-    suspend fun extractsource(url: String): String? {
-        val iframe = app.get("https://nhplayer.com/$url").document
-        return iframe.select("script:containsData(sources)").toString()
-            .substringAfter("file: \"").substringBefore("\",")
-    }
-
-    suspend fun extractsubtitles(url: String): String? {
-        val iframe = app.get("https://nhplayer.com/$url").document
-        val iframeres = iframe.select("script:containsData(sources)").toString()
-        val pattern = "\"file\":.\"(.*)\",".toRegex()
-        return pattern.find(iframeres)?.groups?.get(1)?.value ?: ""
     }
 }
