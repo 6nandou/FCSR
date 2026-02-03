@@ -3,7 +3,7 @@ package com.example
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
-import com.lagradost.cloudstream3.utils.newExtractorLink
+import com.lagradost.cloudstream3.utils.Qualities
 
 class AnimeId : MainAPI() {
     override var mainUrl = "https://animeidhentai.com"
@@ -67,41 +67,4 @@ class AnimeId : MainAPI() {
 
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.plot = description
-            this.posterUrl = result.selectFirst("meta[property=og:image]")?.attr("content")
-        }
-    }
-
-    override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        val res = app.get(data).document
-        
-        // 1. Extraer de servidores externos (Dood, Voe, etc.)
-        res.select("div.embed iframe, div.servers iframe, li[data-id] > a").forEach { element ->
-            val src = if (element.tagName() == "a") element.attr("href") else element.attr("src")
-            if (src.isNotEmpty() && !src.contains("nhplayer")) {
-                loadExtractor(src, data, subtitleCallback, callback)
-            }
-        }
-
-        // 2. Extraer link directo con Referer para corregir error de reproducción
-        res.select("video source").forEach { source ->
-            val videoUrl = source.attr("src")
-            if (videoUrl.isNotEmpty()) {
-                val link = newExtractorLink(
-                    this.name,
-                    "Directo",
-                    videoUrl
-                )
-                // Esto engaña al servidor para permitir la reproducción
-                link.referer = "$mainUrl/" 
-                callback.invoke(link)
-            }
-        }
-
-        return true
-    }
-}
+            this.posterUrl = result.selectFirst("meta
