@@ -43,6 +43,7 @@ class AnimeflvnetProvider : MainAPI() {
         )
         val items = ArrayList<HomePageList>()
         val isHorizontal = true
+        
         items.add(
             HomePageList(
                 "Últimos episodios",
@@ -61,7 +62,7 @@ class AnimeflvnetProvider : MainAPI() {
                 }, isHorizontal)
         )
 
-        urls.apmap { (url, name) ->
+        urls.amap { (url, name) ->
             val doc = app.get(url).document
             val home = doc.select("ul.ListAnimes li article").mapNotNull {
                 val title = it.selectFirst("h3.Title")?.text() ?: return@mapNotNull null
@@ -77,8 +78,9 @@ class AnimeflvnetProvider : MainAPI() {
 
             items.add(HomePageList(name, home))
         }
+        
         if (items.size <= 0) throw ErrorLoadingException()
-        return HomePageResponse(items)
+        return newHomePageResponse(items, false)
     }
 
     data class SearchObject(
@@ -105,6 +107,7 @@ class AnimeflvnetProvider : MainAPI() {
             }
         }
     }
+
     override suspend fun search(query: String): List<SearchResponse> {
         val doc = app.get("$mainUrl/browse?q=$query").document
         val sss = doc.select("ul.ListAnimes article").map { ll ->
@@ -138,19 +141,12 @@ class AnimeflvnetProvider : MainAPI() {
             if (script.data().contains("var episodes = [")) {
                 val data = script.data().substringAfter("var episodes = [").substringBefore("];")
                 data.split("],").forEach {
-
                     val epNum = it.removePrefix("[").substringBefore(",")
-                    // val epthumbid = it.removePrefix("[").substringAfter(",").substringBefore("]")
-                    val animeid = doc.selectFirst("div.Strs.RateIt")?.attr("data-id")
-                    //val epthumb = "https://cdn.animeflv.net/screenshots/$animeid/$epNum/th_3.jpg"
                     val link = url.replace("/anime/", "/ver/") + "-$epNum"
                     episodes.add(
-                        Episode(
-                            link,
-                            null,
-                            //posterUrl = epthumb,
-                            episode = epNum.toIntOrNull()
-                        )
+                        newEpisode(link) {
+                            this.episode = epNum.toIntOrNull()
+                        }
                     )
                 }
             }
@@ -173,21 +169,20 @@ class AnimeflvnetProvider : MainAPI() {
             val code: String,
     )
 
-
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        app.get(data).document.select("script").apmap { script ->
+        app.get(data).document.select("script").amap { script ->
             if (script.data().contains("var videos = {") || script.data()
                     .contains("var anime_id =") || script.data().contains("server")
             ) {
                 val serversRegex = Regex("var videos = (\\{\"SUB\":\\[\\{.*?\\}\\]\\});")
                 val serversplain = serversRegex.find(script.data())?.destructured?.component1() ?: ""
                 val json = parseJson<MainServers>(serversplain)
-                json.sub.apmap {
+                json.sub.amap {
                     val code = it.code
                     loadExtractor(code, data, subtitleCallback, callback)
                 }
