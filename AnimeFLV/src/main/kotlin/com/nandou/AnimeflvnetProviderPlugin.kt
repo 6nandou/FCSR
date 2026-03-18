@@ -1,4 +1,4 @@
-package com.6nandou
+package com.nandou
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
