@@ -36,7 +36,8 @@ jobs:
           find . -name "*.cs3" -exec cp {} builds/ \;
           [ -f plugins.json ] && cp plugins.json builds/ || find . -name "plugins.json" -exec cp {} builds/ \;
           cd builds
-          sed -i "s/\"url\":\"\(.*\).cs3\"/\"url\":\"https:\/\/raw.githubusercontent.com\/${{ github.repository }}\/builds\/\1.cs3\"/g" plugins.json
+          # Usamos | como delimitador para que soporte las / de la URL del repo
+          sed -i "s|\"url\":\"\(.*\).cs3\"|\"url\":\"https://raw.githubusercontent.com/${{ github.repository }}/builds/\1.cs3\"|g" plugins.json
 
       - name: Deploy to builds branch
         uses: JamesIves/github-pages-deploy-action@v4
