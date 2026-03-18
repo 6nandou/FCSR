@@ -19,7 +19,7 @@ cloudstream {
 }
 
 dependencies {
-    val cloudstreamVersion = "3.0.0" // O la versión que use tu repositorio base
+    val cloudstreamVersion = "3.0.0"
     implementation("com.lagradost:cloudstream3:$cloudstreamVersion")
     
     implementation("org.jsoup:jsoup:1.15.3")
