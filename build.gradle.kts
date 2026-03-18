@@ -9,9 +9,11 @@ buildscript {
     }
 
     dependencies {
-        classpath("com.android.tools.build:gradle:7.4.2") 
+        // Actualizado a 8.2.2 para soportar versiones nuevas de Java/Kotlin
+        classpath("com.android.tools.build:gradle:8.2.2") 
         classpath("com.github.recloudstream:gradle:master-SNAPSHOT")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22")
+        // Actualizado a 2.0.21 para solucionar el error de metadatos incompatibles
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21")
     }
 }
 
@@ -40,6 +42,9 @@ subprojects {
     }
 
     android {
+        // Importante: El namespace ahora es obligatorio en Gradle 8+
+        namespace = "com.nandou.animeflv" 
+        
         compileSdkVersion(35)
 
         defaultConfig {
@@ -54,7 +59,7 @@ subprojects {
 
         tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
             kotlinOptions {
-                jvmTarget = "1.8" // Required
+                jvmTarget = "1.8"
                 freeCompilerArgs = freeCompilerArgs +
                         "-Xno-call-assertions" +
                         "-Xno-param-assertions" +
@@ -69,16 +74,15 @@ subprojects {
 
         apk("com.lagradost:cloudstream3:pre-release")
 
-        implementation(kotlin("stdlib")) // adds standard kotlin features, like listOf, mapOf etc
-        implementation("com.github.Blatzar:NiceHttp:0.4.13") // http library
+        implementation(kotlin("stdlib"))
+        implementation("com.github.Blatzar:NiceHttp:0.4.13")
         implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.16.0")
-        implementation("org.jsoup:jsoup:1.18.3") // html parser
-        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0") // delay()
-
+        implementation("org.jsoup:jsoup:1.18.3")
+        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
         implementation("org.mozilla:rhino:1.7.14")
     }
 }
 
 task<Delete>("clean") {
-    delete(rootProject.buildDir)
+    delete(layout.buildDirectory) // buildDir estaba depreciado
 }
