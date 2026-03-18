@@ -11,8 +11,7 @@ buildscript {
     dependencies {
         classpath("com.android.tools.build:gradle:8.2.2") 
         classpath("com.github.recloudstream:gradle:master-SNAPSHOT")
-        // CAMBIO AQUÍ: Forzamos la 2.1.0 para que coincida con Cloudstream
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.0") 
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.10") 
     }
 }
 
@@ -41,7 +40,6 @@ subprojects {
     }
 
     android {
-        // Importante: El namespace ahora es obligatorio en Gradle 8+
         namespace = "com.nandou.animeflv" 
         
         compileSdkVersion(35)
@@ -57,15 +55,16 @@ subprojects {
         }
 
         tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile>().configureEach {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8)
-        freeCompilerArgs.addAll(
-            "-Xno-call-assertions",
-            "-Xno-param-assertions",
-            "-Xno-receiver-assertions"
-        )
-    }
-}
+            compilerOptions {
+                jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8)
+                freeCompilerArgs.addAll(
+                    "-Xno-call-assertions",
+                    "-Xno-param-assertions",
+                    "-Xno-receiver-assertions",
+                    "-Xskip-metadata-version-check"
+                )
+            }
+        }
     }
 
     dependencies {
@@ -84,5 +83,5 @@ subprojects {
 }
 
 task<Delete>("clean") {
-    delete(layout.buildDirectory) // buildDir estaba depreciado
+    delete(layout.buildDirectory)
 }
