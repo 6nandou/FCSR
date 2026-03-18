@@ -22,37 +22,21 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
       - name: Build Plugins
         run: |
-          # Limpiar compilaciones previas
           ./gradlew clean
-          
-          # Compilar los plugins y generar el JSON
           ./gradlew make makePluginsJson --stacktrace
 
       - name: Prepare Artifacts
         run: |
           mkdir -p builds
-          
-          # Copiar los archivos .cs3 generados a la carpeta builds
           find . -name "*.cs3" -exec cp {} builds/ \;
-          
-          # Copiar el plugins.json generado
-          find . -name "plugins.json" -exec cp {} builds/ \;
-          
-          # IMPORTANTE: Corregir el JSON para que la App pueda descargar los archivos
-          # Esto cambia la URL relativa por una URL absoluta de GitHub
+          [ -f plugins.json ] && cp plugins.json builds/ || find . -name "plugins.json" -exec cp {} builds/ \;
           cd builds
-          sed -i "s|\"url\": \"AnimeId.cs3\"|\"url\": \"https://raw.githubusercontent.com/${{ github.repository }}/builds/AnimeId.cs3\"|g" plugins.json
-          
-          # Opcional: Si tienes un icono, asegúrate de que la URL del icono también sea correcta
-          # sed -i "s|\"iconUrl\": \"icon.png\"|\"iconUrl\": \"https://raw.githubusercontent.com/${{ github.repository }}/builds/icon.png\"|g" plugins.json
+          sed -i "s/\"url\":\"\(.*\).cs3\"/\"url\":\"https:\/\/raw.githubusercontent.com\/${{ github.repository }}\/builds\/\1.cs3\"/g" plugins.json
 
       - name: Deploy to builds branch
         uses: JamesIves/github-pages-deploy-action@v4
