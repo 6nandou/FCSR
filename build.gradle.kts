@@ -9,11 +9,10 @@ buildscript {
     }
 
     dependencies {
-        // Actualizado a 8.2.2 para soportar versiones nuevas de Java/Kotlin
         classpath("com.android.tools.build:gradle:8.2.2") 
         classpath("com.github.recloudstream:gradle:master-SNAPSHOT")
-        // Actualizado a 2.0.21 para solucionar el error de metadatos incompatibles
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21")
+        // CAMBIO AQUÍ: Forzamos la 2.1.0 para que coincida con Cloudstream
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.0") 
     }
 }
 
