@@ -5,6 +5,7 @@ cloudstream {
     authors = listOf("6nandou")
     language = "es"
     description = "Proveedor AnimeFLV"
+    version = "1.0.0"
     status = 1
     tvTypes = listOf(
         "Anime",
