@@ -6,12 +6,19 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 class IronHentaiProvider : MainAPI() {
-    override var mainUrl = "https://ironhentai.com"
+    override var mainUrl = "https://ironhentai.com/"
     override var name = "IronHentai"
     override var lang = "es"
     override val hasMainPage = true
     override val hasQuickSearch = false
     override val supportedTypes = setOf(TvType.NSFW)
+
+    override val mainPage = mainPageOf(
+        "directorio/?estado=2" to "En Emision",
+        "directorio/?censura=0" to "Sin Censura",
+        "directorio/?genero=15" to "Vanilla",
+        "directorio/?genero=13" to "Harem",
+    )
 
     private fun Element.toSearchResult(): SearchResponse? {
         val title = this.selectFirst(".card-title p")?.text() ?: return null
@@ -24,18 +31,19 @@ class IronHentaiProvider : MainAPI() {
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get(mainUrl).document
-        val items = ArrayList<HomePageList>()
-
-        val emision = document.select(".carrusel .card").mapNotNull {
+        // La URL se construye automáticamente usando request.data y la página
+        val url = if (page <= 1) {
+            "$mainUrl/${request.data}"
+        } else {
+            "$mainUrl/${request.data}&page=$page"
+        }
+        
+        val document = app.get(url).document
+        val items = document.select(".card").mapNotNull {
             it.toSearchResult()
         }
         
-        if (emision.isNotEmpty()) {
-            items.add(HomePageList("En Emisión", emision, isHorizontal = true))
-        }
-
-        return newHomePageResponse(items, false)
+        return newHomePageResponse(request.name, items)
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
