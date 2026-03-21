@@ -1,26 +1,5 @@
 [
     {
-        "iconUrl": "http://www.google.com/s2/favicons?domain=https://animefenix2.tv/",
-        "apiVersion": 1,
-        "repositoryUrl": "https://github.com/6nandou/FCSR",
-        "fileSize": 10369,
-        "status": 1,
-        "language": "es",
-        "authors": [
-            "6nandou"
-        ],
-        "tvTypes": [
-            "Anime",
-            "OVA",
-            "AnimeMovie"
-        ],
-        "version": -1,
-        "internalName": "AnimeFenix",
-        "description": "Proveedor AnimeFenix",
-        "url": "https://raw.githubusercontent.com/6nandou/FCSR/builds/AnimeFenix.cs3",
-        "name": "AnimeFenix"
-    },
-    {
         "iconUrl": "http://www.google.com/s2/favicons?domain=https://www3.animeflv.net/",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/6nandou/FCSR",
