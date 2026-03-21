@@ -24,7 +24,7 @@
         "iconUrl": "http://www.google.com/s2/favicons?domain=https://ironhentai.com/",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/6nandou/FCSR",
-        "fileSize": 10450,
+        "fileSize": 10451,
         "status": 1,
         "language": "es",
         "authors": [
@@ -33,7 +33,7 @@
         "tvTypes": [
             "NSFW"
         ],
-        "version": 1,
+        "version": -1,
         "internalName": "IronHentai",
         "description": "Proveedor IronHentai",
         "url": "https://raw.githubusercontent.com/6nandou/FCSR/builds/IronHentai.cs3",
