@@ -59,17 +59,16 @@ class IronHentaiProvider : MainAPI() {
         val plot = document.selectFirst(".sinopsis, .entry-content")?.text() ?: ""
 
         val episodes = ArrayList<Episode>()
-        val items = document.select(".episodios-wrapper li a, .lista-episodios li a, .list-eps li a, a[href*='/ver/']")
+        
+        val items = document.select("#eps li a")
         
         if (items.isNotEmpty()) {
             items.forEachIndexed { index, element ->
                 val epHref = fixUrl(element.attr("href"))
-                if (!episodes.any { it.data == epHref }) {
-                    episodes.add(newEpisode(epHref) {
-                        this.name = element.selectFirst("p")?.text() ?: "Episodio ${index + 1}"
-                        this.episode = index + 1
-                    })
-                }
+                episodes.add(newEpisode(epHref) {
+                    this.name = element.selectFirst("p")?.text()?.trim() ?: "Episodio ${index + 1}"
+                    this.episode = index + 1
+                })
             }
         }
 
