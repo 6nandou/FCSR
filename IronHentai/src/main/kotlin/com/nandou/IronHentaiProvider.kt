@@ -6,7 +6,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 class IronHentaiProvider : MainAPI() {
-    override var mainUrl = "https://ironhentai.com/"
+    override var mainUrl = "https://ironhentai.com"
     override var name = "IronHentai"
     override var lang = "es"
     override val hasMainPage = true
@@ -14,14 +14,17 @@ class IronHentaiProvider : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-        "directorio/?estado=2" to "En Emision",
+        "directorio/?estado=2" to "En Emisión",
         "directorio/?censura=0" to "Sin Censura",
         "directorio/?genero=15" to "Vanilla",
         "directorio/?genero=13" to "Harem",
     )
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val title = this.selectFirst(".card-title p")?.text() ?: return null
+        val title = this.selectFirst("a > p")?.text() 
+            ?: this.selectFirst("img")?.attr("alt") 
+            ?: return null
+        
         val href = fixUrl(this.selectFirst("a")?.attr("href") ?: return null)
         val poster = this.selectFirst("img")?.attr("src")
 
@@ -31,7 +34,6 @@ class IronHentaiProvider : MainAPI() {
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        // La URL se construye automáticamente usando request.data y la página
         val url = if (page <= 1) {
             "$mainUrl/${request.data}"
         } else {
@@ -39,7 +41,7 @@ class IronHentaiProvider : MainAPI() {
         }
         
         val document = app.get(url).document
-        val items = document.select(".card").mapNotNull {
+        val items = document.select(".card, article").mapNotNull {
             it.toSearchResult()
         }
         
@@ -48,7 +50,7 @@ class IronHentaiProvider : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val document = app.get("$mainUrl/directorio/?q=$query").document
-        return document.select(".card").mapNotNull {
+        return document.select("article").mapNotNull {
             it.toSearchResult()
         }
     }
@@ -57,8 +59,8 @@ class IronHentaiProvider : MainAPI() {
         val document = app.get(url).document
         
         val title = document.selectFirst("h1")?.text() ?: ""
-        val poster = document.selectFirst(".portada img")?.attr("src") ?: ""
-        val plot = document.selectFirst(".sinopsis")?.text()
+        val poster = document.selectFirst(".portada img, .entry-thumbnail img")?.attr("src") ?: ""
+        val plot = document.selectFirst(".sinopsis, .entry-content p")?.text()
 
         val episodes = ArrayList<Episode>()
         
@@ -101,9 +103,9 @@ class IronHentaiProvider : MainAPI() {
         
         document.select("script").forEach { script ->
             val code = script.data()
-            if (code.contains("var frame = '")) {
-                val url = code.substringAfter("src=\"").substringBefore("\"")
-                loadExtractor(fixUrl(url), data, subtitleCallback, callback)
+            if (code.contains("var frame = '") || code.contains("document.write")) {
+                val url = code.substringAfter("src=\"", "").substringBefore("\"", "")
+                if (url.isNotEmpty()) loadExtractor(fixUrl(url), data, subtitleCallback, callback)
             }
         }
 
