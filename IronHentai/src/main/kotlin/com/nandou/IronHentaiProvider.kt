@@ -60,15 +60,17 @@ class IronHentaiProvider : MainAPI() {
 
         val episodes = ArrayList<Episode>()
         
-        val items = document.select("#eps li a")
+        val items = document.select(".episodios ul li a, #eps li a, .list-eps li a")
         
         if (items.isNotEmpty()) {
             items.forEachIndexed { index, element ->
                 val epHref = fixUrl(element.attr("href"))
-                episodes.add(newEpisode(epHref) {
-                    this.name = element.selectFirst("p")?.text()?.trim() ?: "Episodio ${index + 1}"
-                    this.episode = index + 1
-                })
+                if (epHref.contains("/ver/")) {
+                    episodes.add(newEpisode(epHref) {
+                        this.name = element.selectFirst("p")?.text()?.trim() ?: "Episodio ${index + 1}"
+                        this.episode = index + 1
+                    })
+                }
             }
         }
 
@@ -96,7 +98,8 @@ class IronHentaiProvider : MainAPI() {
     ): Boolean {
         val document = app.get(data).document
         
-        document.select("iframe, .reproductor iframe, .video-player iframe, #iframe-element").forEach { iframe ->
+        val iframes = document.select("iframe, #iframe-element, .reproductor iframe, .video-player iframe")
+        iframes.forEach { iframe ->
             var src = iframe.attr("src")
             if (src.isBlank()) src = iframe.attr("data-src")
             
