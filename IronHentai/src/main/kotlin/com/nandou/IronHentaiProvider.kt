@@ -55,25 +55,29 @@ class IronHentaiProvider : MainAPI() {
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
         val title = document.selectFirst("h1")?.text() ?: ""
-        val poster = document.selectFirst(".portada img, .skeleton-loaded")?.attr("src") ?: ""
-        val plot = document.selectFirst(".sinopsis")?.text() ?: ""
+        val poster = document.selectFirst(".portada img, .skeleton-loaded, img[src*='portadas']")?.attr("src") ?: ""
+        val plot = document.selectFirst(".sinopsis, .entry-content")?.text() ?: ""
 
         val episodes = ArrayList<Episode>()
-        val items = document.select(".episodios-wrapper li a, .lista-episodios a")
+        val items = document.select(".episodios-wrapper li a, .lista-episodios li a, .list-eps li a, a[href*='/ver/']")
         
         if (items.isNotEmpty()) {
             items.forEachIndexed { index, element ->
                 val epHref = fixUrl(element.attr("href"))
-                episodes.add(newEpisode(epHref) {
-                    this.name = element.selectFirst("p")?.text() ?: "Episodio ${index + 1}"
-                    this.episode = index + 1
-                })
+                if (!episodes.any { it.data == epHref }) {
+                    episodes.add(newEpisode(epHref) {
+                        this.name = element.selectFirst("p")?.text() ?: "Episodio ${index + 1}"
+                        this.episode = index + 1
+                    })
+                }
             }
-        } else {
+        }
+
+        if (episodes.isEmpty()) {
             val slug = url.trimEnd('/').substringAfterLast("/")
             val verUrl = "$mainUrl/ver/$slug-1"
             episodes.add(newEpisode(verUrl) {
-                this.name = title
+                this.name = "Episodio 1"
                 this.episode = 1
             })
         }
@@ -81,7 +85,7 @@ class IronHentaiProvider : MainAPI() {
         return newAnimeLoadResponse(title, url, TvType.NSFW) {
             this.posterUrl = fixUrl(poster)
             this.plot = plot
-            addEpisodes(DubStatus.Subbed, episodes.reversed())
+            addEpisodes(DubStatus.Subbed, episodes.distinctBy { it.data }.sortedBy { it.episode })
         }
     }
 
@@ -93,22 +97,26 @@ class IronHentaiProvider : MainAPI() {
     ): Boolean {
         val document = app.get(data).document
         
-        document.select("iframe, .reproductor iframe").forEach { iframe ->
-            val src = fixUrl(iframe.attr("src"))
+        document.select("iframe, .reproductor iframe, .video-player iframe, #iframe-element").forEach { iframe ->
+            var src = iframe.attr("src")
+            if (src.isBlank()) src = iframe.attr("data-src")
             
-            if (src.contains("redirect.php?id=")) {
-                val realUrl = src.substringAfter("id=")
-                if (realUrl.startsWith("http")) {
-                    loadExtractor(realUrl, data, subtitleCallback, callback)
+            if (src.isNotBlank()) {
+                val fixedSrc = fixUrl(src)
+                if (fixedSrc.contains("redirect.php?id=")) {
+                    val realUrl = fixedSrc.substringAfter("id=")
+                    if (realUrl.startsWith("http")) {
+                        loadExtractor(realUrl, data, subtitleCallback, callback)
+                    }
+                } else if (!fixedSrc.contains("google") && !fixedSrc.contains("facebook")) {
+                    loadExtractor(fixedSrc, data, subtitleCallback, callback)
                 }
-            } else if (!src.contains("google") && !src.contains("facebook")) {
-                loadExtractor(src, data, subtitleCallback, callback)
             }
         }
 
         document.select("script").forEach { script ->
             val code = script.data()
-            if (code.contains("var frame = '") || code.contains("src=\"")) {
+            if (code.contains("var frame = '") || code.contains("src=\"http")) {
                 val extractedUrl = code.substringAfter("src=\"", "").substringBefore("\"", "")
                 if (extractedUrl.contains("http")) {
                     loadExtractor(fixUrl(extractedUrl), data, subtitleCallback, callback)
