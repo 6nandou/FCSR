@@ -3,7 +3,7 @@
         "iconUrl": "http://www.google.com/s2/favicons?domain=https://www3.animeflv.net/",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/6nandou/FCSR",
-        "fileSize": 18156,
+        "fileSize": 18155,
         "status": 1,
         "language": "es",
         "authors": [
@@ -14,7 +14,7 @@
             "OVA",
             "AnimeMovie"
         ],
-        "version": -1,
+        "version": 1,
         "internalName": "AnimeFLV",
         "description": "Proveedor AnimeFLV",
         "url": "https://raw.githubusercontent.com/6nandou/FCSR/builds/AnimeFLV.cs3",
@@ -24,7 +24,7 @@
         "iconUrl": "http://www.google.com/s2/favicons?domain=https://ironhentai.com/",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/6nandou/FCSR",
-        "fileSize": 10451,
+        "fileSize": 10450,
         "status": 1,
         "language": "es",
         "authors": [
@@ -33,7 +33,7 @@
         "tvTypes": [
             "NSFW"
         ],
-        "version": -1,
+        "version": 1,
         "internalName": "IronHentai",
         "description": "Proveedor IronHentai",
         "url": "https://raw.githubusercontent.com/6nandou/FCSR/builds/IronHentai.cs3",
