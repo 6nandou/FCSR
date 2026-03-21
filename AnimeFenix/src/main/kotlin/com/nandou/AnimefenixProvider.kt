@@ -8,7 +8,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
 class Animefenix : MainAPI() {
-    override var mainUrl = "https://animefenix2.tv"
+    override var mainUrl = "https://animefenix2.tv/"
     override var name = "AnimeFenix"
     override val hasQuickSearch = true
     override val hasMainPage = true
@@ -18,13 +18,13 @@ class Animefenix : MainAPI() {
         TvType.Anime
     )
 
-     override val mainPage =
+    override val mainPage =
         mainPageOf(
             "directorio/anime?estado=2" to "En Emision",
             "directorio/anime?genero=1" to "Accion",
             "directorio/anime?genero=3" to "Romance",
         )
-        
+
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
@@ -88,8 +88,7 @@ class Animefenix : MainAPI() {
         return newAnimeLoadResponse(title, url, TvType.Anime) {
             this.backgroundPosterUrl = background
             this.plot = description
-            // Aquí corregimos el error de tipo asignando un mapa
-            this.episodes = mapOf(DubStatus.Subbed to episodesList)
+            this.episodes = mapOf(DubStatus.Subbed to episodesList).toMutableMap()
         }
     }
 
