@@ -15,7 +15,7 @@ class AnimeIdHentai : MainAPI() {
     override val supportedTypes = setOf(
         TvType.AnimeMovie,
         TvType.OVA,
-        TvType.Anime,
+        TvType.Anime
     )
 
     override val mainPage =
