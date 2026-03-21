@@ -17,7 +17,14 @@ class Animefenix : MainAPI() {
         TvType.OVA,
         TvType.Anime
     )
-    
+
+     override val mainPage =
+        mainPageOf(
+            "directorio/anime?estado=2" to "En Emision",
+            "directorio/anime?genero=1" to "Accion",
+            "directorio/anime?genero=3" to "Romance",
+        )
+        
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
@@ -68,7 +75,7 @@ class Animefenix : MainAPI() {
         val description = result.selectFirst("div.description")?.text()
         val title = result.selectFirst("h1.title")?.text() ?: result.selectFirst("h1.ttl")?.text() ?: ""
 
-        val episodes = result.select("ul.episode-list li").mapNotNull {
+        val episodesList = result.select("ul.episode-list li").mapNotNull {
             val epHref = it.selectFirst("a")?.attr("href") ?: ""
             val epNum = it.selectFirst("a")?.text()?.filter { char -> char.isDigit() }?.toIntOrNull()
             
@@ -81,7 +88,8 @@ class Animefenix : MainAPI() {
         return newAnimeLoadResponse(title, url, TvType.Anime) {
             this.backgroundPosterUrl = background
             this.plot = description
-            this.episodes = episodes
+            // Aquí corregimos el error de tipo asignando un mapa
+            this.episodes = mapOf(DubStatus.Subbed to episodesList)
         }
     }
 
@@ -95,7 +103,7 @@ class Animefenix : MainAPI() {
         
         res.select("div.player-container iframe, div.embed iframe, .episode-page__servers-list a").forEach { element ->
             val src = if (element.tagName() == "a") element.attr("href") else element.attr("src")
-            if (src.startsWith("http")) {
+            if (src != null && src.startsWith("http")) {
                 loadExtractor(src, data, subtitleCallback, callback)
             }
         }
