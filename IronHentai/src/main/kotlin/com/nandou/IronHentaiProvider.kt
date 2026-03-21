@@ -6,7 +6,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 class IronHentaiProvider : MainAPI() {
-    override var mainUrl = "https://ironhentai.com"
+    override var mainUrl = "https://ironhentai.com/"
     override var name = "IronHentai"
     override var lang = "es"
     override val hasMainPage = true
@@ -34,47 +34,37 @@ class IronHentaiProvider : MainAPI() {
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = if (page <= 1) {
-            "$mainUrl/${request.data}"
-        } else {
-            "$mainUrl/${request.data}&page=$page"
-        }
-        
+        val url = if (page <= 1) "$mainUrl/${request.data}" else "$mainUrl/${request.data}&page=$page"
         val document = app.get(url).document
-        val items = document.select(".card, article").mapNotNull {
-            it.toSearchResult()
-        }
-        
+        val items = document.select(".card, article").mapNotNull { it.toSearchResult() }
         return newHomePageResponse(request.name, items)
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
         val document = app.get("$mainUrl/directorio/?q=$query").document
-        return document.select("article").mapNotNull {
-            it.toSearchResult()
-        }
+        return document.select("article").mapNotNull { it.toSearchResult() }
     }
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
-        
-        val title = document.selectFirst("h1")?.text() ?: ""
-        val poster = document.selectFirst(".portada img, .entry-thumbnail img")?.attr("src") ?: ""
-        val plot = document.selectFirst(".sinopsis, .entry-content p")?.text()
+        val title = document.selectFirst("h1.entry-title")?.text() ?: document.selectFirst("h1")?.text() ?: ""
+        val poster = document.selectFirst("img.skeleton-loaded")?.attr("src") ?: ""
+        val plot = document.selectFirst(".sinopsis p")?.text() ?: ""
 
         val episodes = ArrayList<Episode>()
         
-        document.select(".lista-episodios a, .episodios-wrapper a").forEachIndexed { index, element ->
+        val items = document.select(".episodios-wrapper li a, .lista-episodios a")
+        items.forEachIndexed { index, element ->
             val epHref = fixUrl(element.attr("href"))
             episodes.add(newEpisode(epHref) {
-                this.name = element.text()
+                this.name = element.selectFirst("p")?.text() ?: "Episodio ${index + 1}"
                 this.episode = index + 1
             })
         }
 
         if (episodes.isEmpty()) {
             episodes.add(newEpisode(url) {
-                this.name = "Película/OVA"
+                this.name = title
                 this.episode = 1
             })
         }
@@ -94,18 +84,24 @@ class IronHentaiProvider : MainAPI() {
     ): Boolean {
         val document = app.get(data).document
         
-        document.select("iframe").forEach { iframe ->
+        document.select("iframe, .reproductor iframe, .video-player iframe").forEach { iframe ->
             val src = fixUrl(iframe.attr("src"))
-            if (!src.contains("google") && !src.contains("facebook")) {
+            
+            if (src.contains("animepelix.net/redirect.php?id=")) {
+                val realUrl = src.substringAfter("id=")
+                if (realUrl.startsWith("http")) {
+                    loadExtractor(realUrl, data, subtitleCallback, callback)
+                }
+            } else if (!src.contains("google") && !src.contains("facebook")) {
                 loadExtractor(src, data, subtitleCallback, callback)
             }
         }
-        
+
         document.select("script").forEach { script ->
             val code = script.data()
-            if (code.contains("var frame = '") || code.contains("document.write")) {
-                val url = code.substringAfter("src=\"", "").substringBefore("\"", "")
-                if (url.isNotEmpty()) loadExtractor(fixUrl(url), data, subtitleCallback, callback)
+            if (code.contains("var frame = '")) {
+                val extractedUrl = code.substringAfter("src=\"", "").substringBefore("\"", "")
+                if (extractedUrl.isNotEmpty()) loadExtractor(fixUrl(extractedUrl), data, subtitleCallback, callback)
             }
         }
 
