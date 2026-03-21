@@ -7,7 +7,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
 
-class AnimefenixProvider : MainAPI() {
+class Animefenix : MainAPI() {
     override var mainUrl = "https://animefenix2.tv/"
     override var name = "AnimeFenix"
     override val hasQuickSearch = true
