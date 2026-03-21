@@ -70,8 +70,12 @@ class Animefenix : MainAPI() {
 
         val episodes = result.select("ul.episode-list li").mapNotNull {
             val epHref = it.selectFirst("a")?.attr("href") ?: ""
-            val epNum = it.selectFirst("a")?.text()?.filter { char -> char.isDigit() }?.toIntOrNull() ?: 0
-            Episode(epHref, "Episodio $epNum")
+            val epNum = it.selectFirst("a")?.text()?.filter { char -> char.isDigit() }?.toIntOrNull()
+            
+            newEpisode(epHref) {
+                this.name = "Episodio $epNum"
+                this.episode = epNum
+            }
         }
 
         return newAnimeLoadResponse(title, url, TvType.Anime) {
@@ -89,16 +93,11 @@ class Animefenix : MainAPI() {
     ): Boolean {
         val res = app.get(data).document
         
-        val scripts = res.select("script")
-        scripts.forEach { script ->
-            val content = script.data()
-            if (content.contains("var streams =")) {
+        res.select("div.player-container iframe, div.embed iframe, .episode-page__servers-list a").forEach { element ->
+            val src = if (element.tagName() == "a") element.attr("href") else element.attr("src")
+            if (src.startsWith("http")) {
+                loadExtractor(src, data, subtitleCallback, callback)
             }
-        }
-
-        res.select("div.player-container iframe, div.embed iframe").forEach { iframe ->
-            val src = iframe.attr("src")
-            loadExtractor(src, data, subtitleCallback, callback)
         }
 
         return true
