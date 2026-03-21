@@ -2,6 +2,7 @@ package com.nandou
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 class IronHentaiProvider : MainAPI() {
@@ -9,12 +10,13 @@ class IronHentaiProvider : MainAPI() {
     override var name = "IronHentai"
     override var lang = "es"
     override val hasMainPage = true
+    override val hasQuickSearch = false
     override val supportedTypes = setOf(TvType.NSFW)
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val title = this.selectFirst(".entry-title a")?.text() ?: return null
-        val href = fixUrl(this.selectFirst(".entry-title a")?.attr("href") ?: return null)
-        val poster = this.selectFirst(".entry-thumbnail img")?.attr("src")
+        val title = this.selectFirst(".card-title p")?.text() ?: return null
+        val href = fixUrl(this.selectFirst("a")?.attr("href") ?: return null)
+        val poster = this.selectFirst("img")?.attr("src")
 
         return newAnimeSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = fixUrl(poster ?: "")
@@ -22,34 +24,55 @@ class IronHentaiProvider : MainAPI() {
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get("$mainUrl/page/$page/").document
-        val items = document.select("article.entry-item").mapNotNull {
+        val document = app.get(mainUrl).document
+        val items = ArrayList<HomePageList>()
+
+        val emision = document.select(".carrusel .card").mapNotNull {
             it.toSearchResult()
         }
-        return newHomePageResponse(listOf(HomePageList("Latest Updates", items)), true)
+        
+        if (emision.isNotEmpty()) {
+            items.add(HomePageList("En Emisión", emision, isHorizontal = true))
+        }
+
+        return newHomePageResponse(items, false)
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val document = app.get("$mainUrl/?s=$query").document
-        return document.select("article.entry-item").mapNotNull {
+        val document = app.get("$mainUrl/directorio/?q=$query").document
+        return document.select(".card").mapNotNull {
             it.toSearchResult()
         }
     }
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
-        val title = document.selectFirst("h1.entry-title")?.text() ?: ""
-        val poster = document.selectFirst(".entry-thumbnail img")?.attr("src")
         
-        val images = document.select(".entry-content img").map { it.attr("src") }
+        val title = document.selectFirst("h1")?.text() ?: ""
+        val poster = document.selectFirst(".portada img")?.attr("src") ?: ""
+        val plot = document.selectFirst(".sinopsis")?.text()
+
+        val episodes = ArrayList<Episode>()
+        
+        document.select(".lista-episodios a, .episodios-wrapper a").forEachIndexed { index, element ->
+            val epHref = fixUrl(element.attr("href"))
+            episodes.add(newEpisode(epHref) {
+                this.name = element.text()
+                this.episode = index + 1
+            })
+        }
+
+        if (episodes.isEmpty()) {
+            episodes.add(newEpisode(url) {
+                this.name = "Película/OVA"
+                this.episode = 1
+            })
+        }
 
         return newAnimeLoadResponse(title, url, TvType.NSFW) {
-            this.posterUrl = fixUrl(poster ?: "")
-            this.plot = "Read ${images.size} pages on IronHentai"
-            addEpisodes(DubStatus.Subbed, listOf(newEpisode(url) {
-                this.name = "Full Gallery"
-                this.episode = 1
-            }))
+            this.posterUrl = fixUrl(poster)
+            this.plot = plot
+            addEpisodes(DubStatus.Subbed, episodes.reversed())
         }
     }
 
@@ -60,9 +83,22 @@ class IronHentaiProvider : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
-        document.select(".entry-content img").forEach { img ->
-            val link = img.attr("src")
+        
+        document.select("iframe").forEach { iframe ->
+            val src = fixUrl(iframe.attr("src"))
+            if (!src.contains("google") && !src.contains("facebook")) {
+                loadExtractor(src, data, subtitleCallback, callback)
+            }
         }
+        
+        document.select("script").forEach { script ->
+            val code = script.data()
+            if (code.contains("var frame = '")) {
+                val url = code.substringAfter("src=\"").substringBefore("\"")
+                loadExtractor(fixUrl(url), data, subtitleCallback, callback)
+            }
+        }
+
         return true
     }
 }
