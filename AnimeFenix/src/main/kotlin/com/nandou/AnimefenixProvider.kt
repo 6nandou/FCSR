@@ -6,9 +6,8 @@ import com.lagradost.cloudstream3.mvvm.logError
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
-
 class Animefenix : MainAPI() {
-    override var mainUrl = "https://animefenix2.tv/"
+    override var mainUrl = "https://animefenix2.tv"
     override var name = "AnimeFenix"
     override val hasQuickSearch = true
     override val hasMainPage = true
@@ -28,60 +27,53 @@ class Animefenix : MainAPI() {
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
-    ):
-            HomePageResponse? {
-        var list = mutableListOf<AnimeSearchResponse>()
-        val res = app.get("$mainUrl/${request.data}/page/$page").document
-        res.select("article.anime.poster.por").mapNotNull { article ->
-            val name = article.selectFirst("header > div.ttl")?.text() ?: ""
+    ): HomePageResponse? {
+        val list = mutableListOf<AnimeSearchResponse>()
+        val url = if (page <= 1) "$mainUrl/${request.data}" else "$mainUrl/${request.data}&page=$page"
+        val res = app.get(url).document
+        
+        res.select("article.anime").forEach { article ->
+            val title = article.selectFirst("header > div.ttl")?.text() ?: ""
             val poster = article.selectFirst("img")?.attr("src")
-            val url = article.selectFirst("a.lnk-blk")?.attr("href") ?: ""
-            list.add(newAnimeSearchResponse(name, url)
-            {
-                this.posterUrl = poster
-            })
+            val href = article.selectFirst("a.lnk-blk")?.attr("href") ?: ""
+            if (href.isNotBlank()) {
+                list.add(newAnimeSearchResponse(title, href) {
+                    this.posterUrl = poster
+                })
+            }
         }
+        
         return newHomePageResponse(
-            list = HomePageList(
+            listOf(HomePageList(
                 name = request.name,
                 list = list,
                 isHorizontalImages = true
-            ),
+            )),
             hasNext = true
         )
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val url =
-            "$mainUrl/?s=${query}"
-        return app.get(
-            url,
-        ).document.select("article.anime.poster.por").mapNotNull { article ->
-            val name = article.selectFirst("header > div.ttl")?.text() ?: ""
+        val url = "$mainUrl/?s=$query"
+        return app.get(url).document.select("article.anime").mapNotNull { article ->
+            val title = article.selectFirst("header > div.ttl")?.text() ?: ""
             val poster = article.selectFirst("img")?.attr("src")
-            val url = article.selectFirst("a.lnk-blk")?.attr("href") ?: ""
-            newAnimeSearchResponse(name, url) {
-                posterUrl = poster
-
+            val href = article.selectFirst("a.lnk-blk")?.attr("href") ?: ""
+            newAnimeSearchResponse(title, href) {
+                this.posterUrl = poster
             }
         }
-
     }
 
     override suspend fun load(url: String): LoadResponse {
         val result = app.get(url).document
-        val background =
-            result.selectFirst("div.backdrop")?.attr("style")?.substringAfter("url('")
-                ?.replace("')", "")
+        val background = result.selectFirst("div.backdrop")?.attr("style")
+            ?.substringAfter("url('")?.substringBefore("')")
         val description = result.selectFirst("div.description > p")?.text()
-        val name =
-            result.selectFirst("header.anime-hd h1.ttl")?.text() ?: ""
+        val title = result.selectFirst("header.anime-hd h1.ttl")?.text() ?: ""
 
-
-        return newMovieLoadResponse(name, url, TvType.NSFW, url) {
-            this.backgroundPosterUrl =
-                if (background.isNullOrEmpty()) result.selectFirst("meta[property=og:image]")
-                    ?.attr("content")?.trim() else background
+        return newAnimeLoadResponse(title, url, TvType.Anime) {
+            this.backgroundPosterUrl = background ?: result.selectFirst("meta[property=og:image]")?.attr("content")
             this.plot = description
         }
     }
@@ -92,58 +84,43 @@ class Animefenix : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val res = app.get(data).document
-        val iframe = res.selectFirst("div.embed > iframe")?.attr("src") ?: ""
-        val playerurl = extractplayer(iframe) ?: ""
-        val sourceurl = extractsource(playerurl) ?:""
-        val subtitle = extractsubtitles(playerurl) ?:""
         try {
-            callback.invoke(
-                newExtractorLink(
-                    source = this.name,
-                    name = this.name,
-                    url = sourceurl,
+            val res = app.get(data).document
+            val iframe = res.selectFirst("div.embed > iframe")?.attr("src") ?: ""
+            val playerurl = extractplayer(iframe) ?: return false
+            val sourceurl = extractsource(playerurl) ?: ""
+            val subtitle = extractsubtitles(playerurl) ?: ""
+            
+            if (sourceurl.isNotBlank()) {
+                callback.invoke(
+                    newExtractorLink(
+                        source = this.name,
+                        name = this.name,
+                        url = sourceurl,
+                    )
                 )
-            )
+            }
+            if (subtitle.isNotBlank()) {
+                subtitleCallback.invoke(SubtitleFile("spa", subtitle))
+            }
         } catch (e: Exception) {
             logError(e)
         }
-        subtitleCallback.invoke(
-            SubtitleFile(
-                "eng",
-                subtitle
-            )
-        )
         return true
     }
 
     suspend fun extractplayer(url: String): String? {
-        val iframes = app.get(url).document
-        val iframeres = iframes.selectFirst("div.servers li")?.attr("data-id") ?: ""
-        Log.d("HATE", iframeres)
-
-        return iframeres
-
+        return app.get(url).document.selectFirst("div.servers li")?.attr("data-id")
     }
 
     suspend fun extractsource(url: String): String? {
-        val iframe = app.get("https://nhplayer.com/$url").document
-        val iframeres = iframe.select("script:containsData(sources)").toString()
-            .substringAfter("file: \"").substringBefore("\",")
-        Log.d("Pain", iframeres)
-
-        return iframeres
-
+        val script = app.get("https://nhplayer.com/$url").document.select("script:containsData(sources)").toString()
+        return script.substringAfter("file: \"").substringBefore("\",")
     }
 
     suspend fun extractsubtitles(url: String): String? {
-        val iframe = app.get("https://nhplayer.com/$url").document
-        val iframeres = iframe.select("script:containsData(sources)").toString()
+        val script = app.get("https://nhplayer.com/$url").document.select("script:containsData(sources)").toString()
         val pattern = "\"file\":.\"(.*)\",".toRegex()
-        val matchResult = pattern.find(iframeres)
-        val subtitle = matchResult?.groups?.get(1)?.value ?: ""
-
-        return subtitle
-
+        return pattern.find(script)?.groups?.get(1)?.value
     }
 }
