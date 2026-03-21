@@ -6,7 +6,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 class IronHentaiProvider : MainAPI() {
-    override var mainUrl = "https://ironhentai.com"
+    override var mainUrl = "https://ironhentai.com/"
     override var name = "IronHentai"
     override var lang = "es"
     override val hasMainPage = true
