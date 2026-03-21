@@ -20,7 +20,7 @@ class Animefenix : MainAPI() {
 
     override val mainPage =
         mainPageOf(
-            "directorio/anime?estado=2" to "En Emision"
+            "directorio/anime?estado=2" to "En Emision",
             "directorio/anime?genero=1" to "Accion",
             "directorio/anime?genero=3" to "Romance",
         )
