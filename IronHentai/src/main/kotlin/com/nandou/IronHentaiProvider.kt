@@ -21,7 +21,7 @@ class IronHentaiProvider : MainAPI() {
     )
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val title = this.selectFirst("a > p")?.text() 
+        val title = this.selectFirst("a p, .card-title p")?.text() 
             ?: this.selectFirst("img")?.attr("alt") 
             ?: return null
         
@@ -36,20 +36,20 @@ class IronHentaiProvider : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (page <= 1) "$mainUrl/${request.data}" else "$mainUrl/${request.data}&page=$page"
         val document = app.get(url).document
-        val items = document.select(".card, article").mapNotNull { it.toSearchResult() }
+        val items = document.select("ul.directorio li article, .card").mapNotNull { it.toSearchResult() }
         return newHomePageResponse(request.name, items)
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
         val document = app.get("$mainUrl/directorio/?q=$query").document
-        return document.select("article").mapNotNull { it.toSearchResult() }
+        return document.select("ul.directorio li article").mapNotNull { it.toSearchResult() }
     }
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
-        val title = document.selectFirst("h1.entry-title")?.text() ?: document.selectFirst("h1")?.text() ?: ""
-        val poster = document.selectFirst("img.skeleton-loaded")?.attr("src") ?: ""
-        val plot = document.selectFirst(".sinopsis p")?.text() ?: ""
+        val title = document.selectFirst("h1")?.text() ?: ""
+        val poster = document.selectFirst(".portada img, img.skeleton-loaded")?.attr("src") ?: ""
+        val plot = document.selectFirst(".sinopsis")?.text() ?: ""
 
         val episodes = ArrayList<Episode>()
         val items = document.select(".episodios-wrapper li a, .lista-episodios a")
@@ -86,7 +86,7 @@ class IronHentaiProvider : MainAPI() {
     ): Boolean {
         val document = app.get(data).document
         
-        document.select("iframe, .reproductor iframe, .video-player iframe").forEach { iframe ->
+        document.select("iframe, .reproductor iframe").forEach { iframe ->
             val src = fixUrl(iframe.attr("src"))
             
             if (src.contains("redirect.php?id=")) {
