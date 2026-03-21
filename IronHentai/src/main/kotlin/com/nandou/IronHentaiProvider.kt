@@ -6,7 +6,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 class IronHentaiProvider : MainAPI() {
-    override var mainUrl = "https://ironhentai.com/"
+    override var mainUrl = "https://ironhentai.com"
     override var name = "IronHentai"
     override var lang = "es"
     override val hasMainPage = true
@@ -52,18 +52,20 @@ class IronHentaiProvider : MainAPI() {
         val plot = document.selectFirst(".sinopsis p")?.text() ?: ""
 
         val episodes = ArrayList<Episode>()
-        
         val items = document.select(".episodios-wrapper li a, .lista-episodios a")
-        items.forEachIndexed { index, element ->
-            val epHref = fixUrl(element.attr("href"))
-            episodes.add(newEpisode(epHref) {
-                this.name = element.selectFirst("p")?.text() ?: "Episodio ${index + 1}"
-                this.episode = index + 1
-            })
-        }
-
-        if (episodes.isEmpty()) {
-            episodes.add(newEpisode(url) {
+        
+        if (items.isNotEmpty()) {
+            items.forEachIndexed { index, element ->
+                val epHref = fixUrl(element.attr("href"))
+                episodes.add(newEpisode(epHref) {
+                    this.name = element.selectFirst("p")?.text() ?: "Episodio ${index + 1}"
+                    this.episode = index + 1
+                })
+            }
+        } else {
+            val slug = url.trimEnd('/').substringAfterLast("/")
+            val verUrl = "$mainUrl/ver/$slug-1"
+            episodes.add(newEpisode(verUrl) {
                 this.name = title
                 this.episode = 1
             })
@@ -87,7 +89,7 @@ class IronHentaiProvider : MainAPI() {
         document.select("iframe, .reproductor iframe, .video-player iframe").forEach { iframe ->
             val src = fixUrl(iframe.attr("src"))
             
-            if (src.contains("animepelix.net/redirect.php?id=")) {
+            if (src.contains("redirect.php?id=")) {
                 val realUrl = src.substringAfter("id=")
                 if (realUrl.startsWith("http")) {
                     loadExtractor(realUrl, data, subtitleCallback, callback)
@@ -99,9 +101,11 @@ class IronHentaiProvider : MainAPI() {
 
         document.select("script").forEach { script ->
             val code = script.data()
-            if (code.contains("var frame = '")) {
+            if (code.contains("var frame = '") || code.contains("src=\"")) {
                 val extractedUrl = code.substringAfter("src=\"", "").substringBefore("\"", "")
-                if (extractedUrl.isNotEmpty()) loadExtractor(fixUrl(extractedUrl), data, subtitleCallback, callback)
+                if (extractedUrl.contains("http")) {
+                    loadExtractor(fixUrl(extractedUrl), data, subtitleCallback, callback)
+                }
             }
         }
 
