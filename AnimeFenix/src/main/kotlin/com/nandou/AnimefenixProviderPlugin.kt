@@ -7,6 +7,6 @@ import android.content.Context
 @CloudstreamPlugin
 class AnimefenixProviderPlugin: Plugin() {
     override fun load(context: Context) {
-        registerMainAPI(AnimefenixProvider())
+        registerMainAPI(Animefenix())
     }
 }
