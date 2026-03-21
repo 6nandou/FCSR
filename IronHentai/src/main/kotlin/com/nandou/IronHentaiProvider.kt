@@ -6,7 +6,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 class IronHentaiProvider : MainAPI() {
-    override var mainUrl = "https://ironhentai.com/"
+    override var mainUrl = "https://ironhentai.com"
     override var name = "IronHentai"
     override var lang = "es"
     override val hasMainPage = true
@@ -21,8 +21,9 @@ class IronHentaiProvider : MainAPI() {
     )
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val title = this.selectFirst("a p, .card-title p")?.text() 
-            ?: this.selectFirst("img")?.attr("alt") 
+        val title = this.selectFirst("a > p")?.text()
+            ?: this.selectFirst("p")?.text()
+            ?: this.selectFirst("img")?.attr("alt")
             ?: return null
         
         val href = fixUrl(this.selectFirst("a")?.attr("href") ?: return null)
@@ -36,19 +37,25 @@ class IronHentaiProvider : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (page <= 1) "$mainUrl/${request.data}" else "$mainUrl/${request.data}&page=$page"
         val document = app.get(url).document
-        val items = document.select("ul.directorio li article, .card").mapNotNull { it.toSearchResult() }
+        
+        val items = document.select("ul.directorio li article, .grid-hentais li article, article, .card").mapNotNull {
+            it.toSearchResult()
+        }
+        
         return newHomePageResponse(request.name, items)
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
         val document = app.get("$mainUrl/directorio/?q=$query").document
-        return document.select("ul.directorio li article").mapNotNull { it.toSearchResult() }
+        return document.select("ul.directorio li article, article").mapNotNull {
+            it.toSearchResult()
+        }
     }
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
         val title = document.selectFirst("h1")?.text() ?: ""
-        val poster = document.selectFirst(".portada img, img.skeleton-loaded")?.attr("src") ?: ""
+        val poster = document.selectFirst(".portada img, .skeleton-loaded")?.attr("src") ?: ""
         val plot = document.selectFirst(".sinopsis")?.text() ?: ""
 
         val episodes = ArrayList<Episode>()
