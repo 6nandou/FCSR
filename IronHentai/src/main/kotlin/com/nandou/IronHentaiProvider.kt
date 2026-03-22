@@ -1,7 +1,6 @@
 package com.nandou
 
 import com.laggradost.cloudstream3.*
-import com.laggradost.cloudstream3.utils.ExtractorLink
 import com.laggradost.cloudstream3.utils.loadExtractor
 import com.laggradost.cloudstream3.utils.Qualities
 import com.laggradost.cloudstream3.utils.newExtractorLink
