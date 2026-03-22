@@ -101,12 +101,11 @@ class IronHentaiProvider : MainAPI() {
             } else if (fixedSrc.endsWith(".mp4") || fixedSrc.contains("archive.org")) {
                 callback.invoke(
                     ExtractorLink(
-                        this.name,
-                        "Mirror Direct",
-                        fixedSrc,
-                        "",
-                        Qualities.Unknown.value,
-                        false
+                        source = this.name,
+                        name = "Mirror Direct",
+                        url = fixedSrc,
+                        referer = data,
+                        quality = Qualities.Unknown.value
                     )
                 )
             } else if (fixedSrc.startsWith("http") && !fixedSrc.contains("google") && !fixedSrc.contains("facebook")) {
