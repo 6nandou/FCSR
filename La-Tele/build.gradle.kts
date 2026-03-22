@@ -7,7 +7,7 @@ cloudstream {
     description = "Proveedor La Tele"
     status = 1
     tvTypes = listOf(
-          "NSFW"
+          "Live"
     )
     iconUrl = "http://www.google.com/s2/favicons?domain=https://alplox.github.io/la-tele/"
 }
