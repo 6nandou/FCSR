@@ -7,6 +7,6 @@ import android.content.Context
 @CloudstreamPlugin
 class ChileM3UPlugin : Plugin() {
     override fun load(context: Context) {
-        registerMainAPI(LaTeleProvider())
+        registerMainAPI(ChileM3UProvider())
     }
 }
