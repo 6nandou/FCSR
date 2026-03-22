@@ -51,15 +51,17 @@ class IronHentaiProvider : MainAPI() {
         val plot = document.selectFirst(".sinopsis")?.text() ?: ""
 
         val episodes = ArrayList<Episode>()
-        val items = document.select("#eps li a")
+        val items = document.select("ul#eps li > a")
 
         if (items.isNotEmpty()) {
             items.reversed().forEachIndexed { index, element ->
                 val epHref = fixUrl(element.attr("href"))
-                episodes.add(newEpisode(epHref) {
-                    this.name = "Episodio ${index + 1}"
-                    this.episode = index + 1
-                })
+                if (epHref.contains("/ver/")) {
+                    episodes.add(newEpisode(epHref) {
+                        this.name = "Episodio ${index + 1}"
+                        this.episode = index + 1
+                    })
+                }
             }
         } else {
             val slug = url.trimEnd('/').substringAfterLast("/")
@@ -84,14 +86,18 @@ class IronHentaiProvider : MainAPI() {
     ): Boolean {
         val document = app.get(data).document
         
-        val links = document.select("iframe, #iframe-element, .descargas a")
+        val links = document.select("iframe, #iframe-element, .descargas a, .video-player iframe")
         links.forEach { element ->
             val src = if (element.tagName() == "a") element.attr("href") else element.attr("src")
+            if (src.isNullOrBlank()) return@forEach
+            
             val fixedSrc = fixUrl(src)
             
             if (fixedSrc.contains("redirect.php?id=")) {
                 val realUrl = fixedSrc.substringAfter("id=")
-                if (realUrl.startsWith("http")) loadExtractor(realUrl, data, subtitleCallback, callback)
+                if (realUrl.startsWith("http")) {
+                    loadExtractor(realUrl, data, subtitleCallback, callback)
+                }
             } else if (fixedSrc.startsWith("http") && !fixedSrc.contains("google") && !fixedSrc.contains("facebook")) {
                 loadExtractor(fixedSrc, data, subtitleCallback, callback)
             }
