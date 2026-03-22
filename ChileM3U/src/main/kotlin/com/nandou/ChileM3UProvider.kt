@@ -3,7 +3,6 @@ package com.nandou
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
-import com.lagradost.cloudstream3.utils.newExtractorLink
 
 class ChileM3UProvider : MainAPI() {
     override var mainUrl = "https://m3u.cl/lista/CL.m3u"
