@@ -16,42 +16,37 @@ class LaTeleProvider : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val document = app.get(mainUrl).document
-        val items = document.select(".card, .channel-item, article, .col-md-3").mapNotNull { it.toSearchResult() }
-        return newHomePageResponse("Canales", items)
+        val items = document.select("button.boton-canal").map { it.toSearchResult() }
+        return newHomePageResponse("Canales Chilenos", items)
     }
 
-    private fun Element.toSearchResult(): SearchResponse? {
-        val title = this.selectFirst(".card-title, h5, p, .name")?.text() ?: return null
-        val href = fixUrl(this.selectFirst("a")?.attr("href") ?: return null)
-        val poster = this.selectFirst("img")?.attr("src")
-
-        return newAnimeSearchResponse(title, href, TvType.Live) {
-            this.posterUrl = fixUrl(poster ?: "")
-        }
+    private fun Element.toSearchResult(): SearchResponse {
+        val title = this.text().trim()
+        return LiveSearchResponse(
+            title,
+            title,
+            this@LaTeleProvider.name,
+            TvType.Live,
+            null
+        )
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
         val document = app.get(mainUrl).document
-        return document.select(".card, .channel-item, article, .col-md-3").mapNotNull { it.toSearchResult() }.filter { 
-            it.name.contains(query, ignoreCase = true) 
-        }
+        return document.select("button.boton-canal")
+            .map { it.toSearchResult() }
+            .filter { it.name.contains(query, ignoreCase = true) }
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
-        val title = document.selectFirst("h1, .channel-title, .card-title, .name")?.text() ?: "Canal TV"
-        val poster = document.selectFirst("img.channel-logo, .card-img-top, img")?.attr("src") ?: ""
-        
-        val episodes = listOf(
-            newEpisode(url) {
-                this.name = title
-            }
+        return LiveLoadResponse(
+            url,
+            url,
+            this.name,
+            url,
+            null,
+            dataUrl = url
         )
-
-        return newAnimeLoadResponse(title, url, TvType.Live) {
-            this.posterUrl = fixUrl(poster)
-            addEpisodes(DubStatus.Subbed, episodes)
-        }
     }
 
     override suspend fun loadLinks(
@@ -60,25 +55,22 @@ class LaTeleProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document = app.get(data).document
+        val document = app.get(mainUrl).document
         
-        val videoSrc = document.selectFirst("video source")?.attr("src") 
+        val videoSrc = document.selectFirst("video source")?.attr("src")
             ?: document.selectFirst("video")?.attr("src")
             ?: document.html().substringAfter("source: '", "").substringBefore("'")
             ?: document.html().substringAfter("file: \"", "").substringBefore("\"")
-            ?: document.selectFirst("iframe")?.attr("src")
 
-        if (!videoSrc.isNullOrBlank()) {
-            val finalUrl = fixUrl(videoSrc)
+        if (videoSrc.isNotBlank()) {
             callback.invoke(
                 newExtractorLink(
                     source = this.name,
-                    name = this.name,
-                    url = finalUrl,
-                    referer = "$mainUrl/",
+                    name = data,
+                    url = fixUrl(videoSrc),
+                    refererUrl = "$mainUrl/",
                 ) {
                     this.quality = Qualities.Unknown.value
-                    this.isM3u8 = finalUrl.contains(".m3u8")
                 }
             )
         }
