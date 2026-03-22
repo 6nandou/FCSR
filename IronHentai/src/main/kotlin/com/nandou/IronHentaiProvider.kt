@@ -106,7 +106,8 @@ class IronHentaiProvider : MainAPI() {
                         name = "Mirror Direct",
                         url = fixedSrc,
                         referer = data,
-                        quality = Qualities.Unknown.value
+                        quality = Qualities.Unknown.value,
+                        isM3u8 = fixedSrc.contains(".m3u8")
                     )
                 )
             } else if (fixedSrc.startsWith("http") && !fixedSrc.contains("google") && !fixedSrc.contains("facebook")) {
