@@ -2,7 +2,6 @@ package com.nandou
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.loadExtractor
-import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import org.jsoup.nodes.Element
@@ -89,30 +88,23 @@ class IronHentaiProvider : MainAPI() {
         val document = app.get(data).document
         
         val links = document.select("iframe, #iframe-element, .descargas a, .video-player iframe")
+        
         links.forEach { element ->
             val src = if (element.tagName() == "a") element.attr("href") else element.attr("src")
             if (src.isNullOrBlank()) return@forEach
             
             val fixedSrc = fixUrl(src)
             
-            if (fixedSrc.contains("mirror_direct") || fixedSrc.endsWith(".mp4") || fixedSrc.contains("archive.org")) {
-                val directUrl = if (fixedSrc.contains("url=")) fixedSrc.substringAfter("url=") else fixedSrc
-                callback.invoke(
-                    newExtractorLink(
-                        name = "Mirror Direct",
-                        source = this.name,
-                        url = directUrl,
-                        referer = mainUrl,
-                        quality = Qualities.Unknown.value,
-                        isM3u8 = directUrl.contains(".m3u8")
-                    )
-                )
-            } else if (fixedSrc.contains("redirect.php?id=")) {
+            if (fixedSrc.contains("redirect.php?id=")) {
                 val realUrl = fixedSrc.substringAfter("id=")
                 if (realUrl.startsWith("http")) {
                     loadExtractor(realUrl, data, subtitleCallback, callback)
                 }
-            } else if (fixedSrc.startsWith("http") && !fixedSrc.contains("google") && !fixedSrc.contains("facebook")) {
+            } else if (fixedSrc.startsWith("http") && 
+                !fixedSrc.contains("google") && 
+                !fixedSrc.contains("facebook") &&
+                !fixedSrc.contains("mirror_direct")) {
+                
                 loadExtractor(fixedSrc, data, subtitleCallback, callback)
             }
         }
