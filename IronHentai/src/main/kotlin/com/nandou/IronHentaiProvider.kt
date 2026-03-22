@@ -1,9 +1,9 @@
 package com.nandou
 
-import com.laggradost.cloudstream3.*
-import com.laggradost.cloudstream3.utils.loadExtractor
-import com.laggradost.cloudstream3.utils.Qualities
-import com.laggradost.cloudstream3.utils.newExtractorLink
+import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.utils.loadExtractor
+import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.newExtractorLink
 import org.jsoup.nodes.Element
 
 class IronHentaiProvider : MainAPI() {
@@ -83,7 +83,7 @@ class IronHentaiProvider : MainAPI() {
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (com.laggradost.cloudstream3.utils.ExtractorLink) -> Unit
+        callback: (com.lagradost.cloudstream3.utils.ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
         
