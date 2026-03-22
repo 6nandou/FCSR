@@ -38,5 +38,23 @@
         "description": "Proveedor IronHentai",
         "url": "https://raw.githubusercontent.com/6nandou/FCSR/builds/IronHentai.cs3",
         "name": "IronHentai"
+    },
+    {
+        "iconUrl": "http://www.google.com/s2/favicons?domain=https://alplox.github.io/la-tele/",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/6nandou/FCSR",
+        "status": 1,
+        "language": "es",
+        "authors": [
+            "6nandou"
+        ],
+        "tvTypes": [
+            "NSFW"
+        ],
+        "version": -1,
+        "internalName": "La-Tele",
+        "description": "Proveedor La Tele",
+        "url": "https://raw.githubusercontent.com/6nandou/FCSR/builds/La-Tele.cs3",
+        "name": "La-Tele"
     }
 ]
