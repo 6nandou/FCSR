@@ -83,7 +83,7 @@ class IronHentaiProvider : MainAPI() {
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (com.lagradost.cloudstream3.utils.ExtractorLink) -> Unit
+        callback: (com.lagradost.cloudstream3.utils.newExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
         
