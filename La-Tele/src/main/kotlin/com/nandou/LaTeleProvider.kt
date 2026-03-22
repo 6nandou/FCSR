@@ -71,13 +71,13 @@ class LaTeleProvider : MainAPI() {
         if (!videoSrc.isNullOrBlank()) {
             val finalUrl = fixUrl(videoSrc)
             callback.invoke(
-                newExtractorLink(
-                    this.name,
-                    this.name,
-                    finalUrl,
-                    mainUrl,
-                    Qualities.Unknown.value,
-                    finalUrl.contains(".m3u8") || finalUrl.contains(".mpd")
+                ExtractorLink(
+                    source = this.name,
+                    name = this.name,
+                    url = finalUrl,
+                    referer = mainUrl,
+                    quality = Qualities.Unknown.value,
+                    isM3u8 = finalUrl.contains(".m3u8") || finalUrl.contains(".mpd")
                 )
             )
         }
