@@ -99,7 +99,7 @@ class IronHentaiProvider : MainAPI() {
                 if (realUrl.startsWith("http")) {
                     loadExtractor(realUrl, data, subtitleCallback, callback)
                 }
-            } else if (fixedSrc.endsWith(".mp4") || fixedSrc.contains("archive.org")) {
+            } else if (fixedSrc.endsWith(".mp4") || fixedSrc.contains("archive.org") || fixedSrc.contains(".m3u8")) {
                 callback.invoke(
                     ExtractorLink(
                         source = this.name,
