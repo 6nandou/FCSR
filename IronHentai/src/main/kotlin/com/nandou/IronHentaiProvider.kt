@@ -4,6 +4,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
+import com.lagradost.cloudstream3.utils.ExtractorLink
 import org.jsoup.nodes.Element
 
 class IronHentaiProvider : MainAPI() {
@@ -83,7 +84,7 @@ class IronHentaiProvider : MainAPI() {
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (com.lagradost.cloudstream3.utils.newExtractorLink) -> Unit
+        callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
         
@@ -98,12 +99,12 @@ class IronHentaiProvider : MainAPI() {
                 val directUrl = if (fixedSrc.contains("url=")) fixedSrc.substringAfter("url=") else fixedSrc
                 callback.invoke(
                     newExtractorLink(
-                        this.name,
-                        "Mirror Direct",
-                        directUrl,
-                        mainUrl,
-                        Qualities.Unknown.value,
-                        directUrl.contains(".m3u8")
+                        name = "Mirror Direct",
+                        source = this.name,
+                        url = directUrl,
+                        referer = mainUrl,
+                        quality = Qualities.Unknown.value,
+                        isM3u8 = directUrl.contains(".m3u8")
                     )
                 )
             } else if (fixedSrc.contains("redirect.php?id=")) {
