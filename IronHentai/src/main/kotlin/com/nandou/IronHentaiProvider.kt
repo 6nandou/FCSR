@@ -4,7 +4,6 @@ import com.laggradost.cloudstream3.*
 import com.laggradost.cloudstream3.utils.ExtractorLink
 import com.laggradost.cloudstream3.utils.loadExtractor
 import com.laggradost.cloudstream3.utils.Qualities
-import com.laggradost.cloudstream3.utils.M3u8Helper
 import org.jsoup.nodes.Element
 
 class IronHentaiProvider : MainAPI() {
@@ -95,23 +94,22 @@ class IronHentaiProvider : MainAPI() {
             
             val fixedSrc = fixUrl(src)
             
-            if (fixedSrc.contains("mirror_direct")) {
-                val directUrl = fixedSrc.substringAfter("url=")
-                callback.invoke(
-                    ExtractorLink(
-                        this.name,
-                        "Mirror Direct",
-                        directUrl,
-                        mainUrl,
-                        Qualities.Unknown.value,
-                        isM3u8 = directUrl.contains(".m3u8")
-                    )
-                )
-            } else if (fixedSrc.contains("redirect.php?id=")) {
+            if (fixedSrc.contains("redirect.php?id=")) {
                 val realUrl = fixedSrc.substringAfter("id=")
                 if (realUrl.startsWith("http")) {
                     loadExtractor(realUrl, data, subtitleCallback, callback)
                 }
+            } else if (fixedSrc.endsWith(".mp4") || fixedSrc.contains("archive.org") || fixedSrc.contains(".m3u8")) {
+                callback.invoke(
+                    ExtractorLink(
+                        source = this.name,
+                        name = "Mirror Direct",
+                        url = fixedSrc,
+                        referer = data,
+                        quality = Qualities.Unknown.value,
+                        isM3u8 = fixedSrc.contains(".m3u8")
+                    )
+                )
             } else if (fixedSrc.startsWith("http") && !fixedSrc.contains("google") && !fixedSrc.contains("facebook")) {
                 loadExtractor(fixedSrc, data, subtitleCallback, callback)
             }
