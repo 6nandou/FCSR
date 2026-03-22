@@ -83,7 +83,7 @@ class IronHentaiProvider : MainAPI() {
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
+        callback: (com.laggradost.cloudstream3.utils.ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
         
@@ -98,12 +98,12 @@ class IronHentaiProvider : MainAPI() {
                 val directUrl = if (fixedSrc.contains("url=")) fixedSrc.substringAfter("url=") else fixedSrc
                 callback.invoke(
                     newExtractorLink(
-                        source = this.name,
-                        name = "Mirror Direct",
-                        url = directUrl,
-                        referer = mainUrl,
-                        quality = Qualities.Unknown.value,
-                        isM3u8 = directUrl.contains(".m3u8")
+                        this.name,
+                        "Mirror Direct",
+                        directUrl,
+                        mainUrl,
+                        Qualities.Unknown.value,
+                        directUrl.contains(".m3u8")
                     )
                 )
             } else if (fixedSrc.contains("redirect.php?id=")) {
