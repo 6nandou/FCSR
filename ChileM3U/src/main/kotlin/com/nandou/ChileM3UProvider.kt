@@ -43,17 +43,13 @@ class ChileM3UProvider : MainAPI() {
     }
 
     private fun M3uChannel.toSearchResult(): SearchResponse {
-        return newLiveSearchResponse(
-            name = this.name,
-            url = this.url,
-            apiName = this@ChileM3UProvider.name,
-            type = TvType.Live,
-            posterUrl = this.logo,
-            id = null,
-            quality = null,
-            posterHeaders = null,
-            lang = null
-        )
+        return LiveSearchResponse.Builder()
+            .name(this.name)
+            .url(this.url)
+            .apiName(this@ChileM3UProvider.name)
+            .type(TvType.Live)
+            .posterUrl(this.logo)
+            .build()
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
@@ -67,14 +63,13 @@ class ChileM3UProvider : MainAPI() {
         val channel = data.firstOrNull { it.url == url }
         val name = channel?.name ?: "Canal"
         
-        return newLiveLoadResponse(
-            name = name,
-            url = url,
-            apiName = this.name,
-            streamUrl = url,
-            posterUrl = channel?.logo,
-            posterHeaders = null
-        )
+        return LiveLoadResponse.Builder()
+            .name(name)
+            .url(url)
+            .apiName(this.name)
+            .streamUrl(url)
+            .posterUrl(channel?.logo)
+            .build()
     }
 
     override suspend fun loadLinks(
@@ -84,15 +79,14 @@ class ChileM3UProvider : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         callback.invoke(
-            newExtractorLink(
+            ExtractorLink(
                 source = this.name,
                 name = this.name,
                 url = data,
                 referer = "",
                 quality = Qualities.Unknown.value,
                 isM3u8 = data.contains(".m3u8"),
-                headers = mapOf(),
-                extractorData = null
+                headers = mapOf()
             )
         )
         return true
