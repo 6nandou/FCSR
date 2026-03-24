@@ -43,11 +43,14 @@ class ChileM3UProvider : MainAPI() {
     }
 
     private fun M3uChannel.toSearchResult(): SearchResponse {
-        return newLiveSearchResponse(
-            name = this.name,
-            url = this.url,
-            apiName = this@ChileM3UProvider.name,
-            posterUrl = this.logo
+        return LiveSearchResponse(
+            this.name,
+            this.url,
+            this@ChileM3UProvider.name,
+            TvType.Live,
+            this.logo,
+            null,
+            null
         )
     }
 
@@ -62,14 +65,14 @@ class ChileM3UProvider : MainAPI() {
         val channel = data.firstOrNull { it.url == url }
         val name = channel?.name ?: "Canal"
         
-        return newLiveLoadResponse(
-            name = name,
-            url = url,
-            apiName = this.name,
-            dataUrl = url
-        ) {
-            this.posterUrl = channel?.logo
-        }
+        return LiveLoadResponse(
+            name,
+            url,
+            this.name,
+            url,
+            channel?.logo,
+            null
+        )
     }
 
     override suspend fun loadLinks(
@@ -80,12 +83,14 @@ class ChileM3UProvider : MainAPI() {
     ): Boolean {
         callback.invoke(
             ExtractorLink(
-                source = this.name,
-                name = this.name,
-                url = data,
-                referer = "",
-                quality = Qualities.Unknown.value,
-                isM3u8 = data.contains(".m3u8")
+                this.name,
+                this.name,
+                data,
+                "",
+                Qualities.Unknown.value,
+                data.contains(".m3u8"),
+                mapOf(),
+                null
             )
         )
         return true
