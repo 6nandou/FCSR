@@ -3,73 +3,84 @@ package com.nandou
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
+import java.util.Base64
 
 class ChileM3UProvider : MainAPI() {
-    override var mainUrl = "https://m3u.cl/lista/CL.m3u"
+    override var mainUrl = "https://m3u.cl/lista-iptv-chile.php"
     override var name = "Chile M3U"
     override var lang = "es"
     override val hasMainPage = true
     override val hasQuickSearch = true
     override val supportedTypes = setOf(TvType.Live)
 
-    private suspend fun getM3uData(): List<M3uChannel> {
-        val res = app.get(mainUrl).text
+    private suspend fun getChannels(): List<M3uChannel> {
+        val document = app.get(mainUrl).document
         val channels = mutableListOf<M3uChannel>()
-        val lines = res.split("\n")
         
-        var currentName = ""
-        var currentLogo = ""
+        val rows = document.select("#tabla_canales tbody tr")
         
-        for (line in lines) {
-            val trimmed = line.trim()
-            if (trimmed.startsWith("#EXTINF")) {
-                currentName = trimmed.substringAfter("tvg-name=\"", "").substringBefore("\"", "")
-                if (currentName.isEmpty()) {
-                    currentName = trimmed.substringAfter(",").trim()
+        for (row in rows) {
+            try {
+                val channelCell = row.select("td.videojs").first()
+                if (channelCell != null) {
+                    val encodedUrl = channelCell.attr("reproducir_canal")
+                    val streamUrl = String(Base64.getDecoder().decode(encodedUrl))
+                    val name = channelCell.attr("reproducir_nombre_canal")
+                    val logoUrl = channelCell.attr("reproducir_logo_canal")
+                    
+                    val fullLogoUrl = if (logoUrl.startsWith("//")) {
+                        "https:$logoUrl"
+                    } else if (logoUrl.startsWith("/")) {
+                        "https://m3u.cl$logoUrl"
+                    } else {
+                        logoUrl
+                    }
+                    
+                    if (name.isNotBlank() && streamUrl.isNotBlank()) {
+                        channels.add(M3uChannel(name, streamUrl, fullLogoUrl))
+                    }
                 }
-                currentLogo = trimmed.substringAfter("tvg-logo=\"", "").substringBefore("\"", "")
-            } else if (trimmed.startsWith("http")) {
-                if (currentName.isNotBlank()) {
-                    channels.add(M3uChannel(currentName, trimmed, currentLogo))
-                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
+        
         return channels
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val items = getM3uData().map { it.toSearchResult() }
+        val items = getChannels().map { it.toSearchResult() }
         return newHomePageResponse("Canales de Chile", items)
     }
 
     private fun M3uChannel.toSearchResult(): SearchResponse {
-        return LiveSearchResponse.Builder()
-            .name(this.name)
-            .url(this.url)
-            .apiName(this@ChileM3UProvider.name)
-            .type(TvType.Live)
-            .posterUrl(this.logo)
-            .build()
+        return newLiveSearchResponse(
+            name = this.name,
+            url = this.url,
+            apiName = this@ChileM3UProvider.name,
+            type = TvType.Live,
+            posterUrl = this.logo
+        )
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        return getM3uData().filter { it.name.contains(query, ignoreCase = true) }.map {
+        return getChannels().filter { it.name.contains(query, ignoreCase = true) }.map {
             it.toSearchResult()
         }
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val data = getM3uData()
-        val channel = data.firstOrNull { it.url == url }
+        val channels = getChannels()
+        val channel = channels.firstOrNull { it.url == url }
         val name = channel?.name ?: "Canal"
         
-        return LiveLoadResponse.Builder()
-            .name(name)
-            .url(url)
-            .apiName(this.name)
-            .streamUrl(url)
-            .posterUrl(channel?.logo)
-            .build()
+        return LiveLoadResponse(
+            name = name,
+            url = url,
+            apiName = this.name,
+            streamUrl = url,
+            posterUrl = channel?.logo
+        )
     }
 
     override suspend fun loadLinks(
@@ -79,14 +90,14 @@ class ChileM3UProvider : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         callback.invoke(
-            ExtractorLink(
+            newExtractorLink(
                 source = this.name,
                 name = this.name,
                 url = data,
-                referer = "",
+                referer = mainUrl,
                 quality = Qualities.Unknown.value,
                 isM3u8 = data.contains(".m3u8"),
-                headers = mapOf()
+                headers = mapOf("Referer" to mainUrl)
             )
         )
         return true
