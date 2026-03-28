@@ -1,6 +1,7 @@
 package com.nandou
 
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
@@ -73,11 +74,11 @@ class CuevanaGsProvider : MainAPI() {
                 val episodeNumber = index + 1
                 
                 episodes.add(
-                    newEpisode() {
-                        this.data = episodeUrl
-                        this.name = "Episodio $episodeNumber"
-                        this.episode = episodeNumber
-                    }
+                    Episode(
+                        episodeUrl,
+                        "Episodio $episodeNumber",
+                        episodeNumber
+                    )
                 )
             }
             
