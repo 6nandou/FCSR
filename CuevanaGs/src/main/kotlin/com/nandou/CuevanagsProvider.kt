@@ -2,11 +2,6 @@ package com.nandou
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.loadExtractor
-import com.lagradost.cloudstream3.utils.newExtractorLink
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import org.jsoup.nodes.Element
 
 class CuevanaGsProvider : MainAPI() {
@@ -14,8 +9,8 @@ class CuevanaGsProvider : MainAPI() {
     override var name = "Cuevana"
     override var lang = "es"
     override val hasMainPage = true
-    override val hasChromecastSupport = true
-    override val hasDownloadSupport = true
+    override val hasChromecastSupport = false
+    override val hasDownloadSupport = false
     override val supportedTypes = setOf(
         TvType.Movie,
         TvType.TvSeries,
@@ -24,18 +19,23 @@ class CuevanaGsProvider : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val items = ArrayList<HomePageList>()
-        val urls = listOf(
+        val categories = listOf(
             Pair("$mainUrl/peliculas", "Películas"),
             Pair("$mainUrl/series", "Series"),
-            Pair("$mainUrl/animes", "Animes"),
+            Pair("$mainUrl/animes", "Animes")
         )
         
-        urls.forEach { (url, name) ->
-            val soup = app.get(url).document
-            val home = soup.select("div.relative.group").mapNotNull {
-                it.toSearchResult()
+        categories.forEach { (url, title) ->
+            try {
+                val soup = app.get(url).document
+                val home = soup.select("div.relative.group").mapNotNull {
+                    it.toSearchResult()
+                }
+                if (home.isNotEmpty()) {
+                    items.add(HomePageList(title, home))
+                }
+            } catch (e: Exception) {
             }
-            items.add(HomePageList(name, home))
         }
 
         return newHomePageResponse(items)
@@ -47,7 +47,8 @@ class CuevanaGsProvider : MainAPI() {
         val title = this.selectFirst("h3")?.text()?.trim() ?: return null
         val posterUrl = fixUrl(this.selectFirst("img")?.attr("src") ?: "")
 
-        val type = if (href.contains("/series/") || href.contains("/animes/")) TvType.TvSeries else TvType.Movie
+        val type = if (href.contains("/series/") || href.contains("/animes/")) 
+            TvType.TvSeries else TvType.Movie
 
         return if (type == TvType.Movie) {
             newMovieSearchResponse(title, href, type) { this.posterUrl = posterUrl }
@@ -69,11 +70,17 @@ class CuevanaGsProvider : MainAPI() {
         
         return if (url.contains("/series/") || url.contains("/animes/")) {
             val episodes = soup.select("a[href*='/episodio/']").map {
-                newEpisode(fixUrl(it.attr("href"))) { this.name = it.text().trim() }
+                newEpisode(fixUrl(it.attr("href"))) { 
+                    this.name = it.text().trim() 
+                }
             }
-            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) { this.posterUrl = poster }
+            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) { 
+                this.posterUrl = poster 
+            }
         } else {
-            newMovieLoadResponse(title, url, TvType.Movie, url) { this.posterUrl = poster }
+            newMovieLoadResponse(title, url, TvType.Movie, url) { 
+                this.posterUrl = poster 
+            }
         }
     }
 
@@ -83,36 +90,6 @@ class CuevanaGsProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document = app.get(data).document
-        document.select("iframe").forEach {
-            val src = fixUrl(it.attr("src"))
-            loadSourceNameExtractor("Cuevana", src, mainUrl, subtitleCallback, callback)
-        }
-        return true
-    }
-}
-
-suspend fun loadSourceNameExtractor(
-    source: String,
-    url: String,
-    referer: String,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit,
-) {
-    loadExtractor(url, referer, subtitleCallback) { link ->
-        CoroutineScope(Dispatchers.IO).launch {
-            callback.invoke(
-                newExtractorLink(
-                    source,
-                    source,
-                    link.url,
-                    referer,
-                    link.quality,
-                    link.type,
-                    link.headers,
-                    link.extractorData
-                )
-            )
-        }
+        return false 
     }
 }
