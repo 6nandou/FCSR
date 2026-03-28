@@ -2,6 +2,7 @@ package com.nandou
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.json.JSONArray
@@ -187,15 +188,20 @@ class AnimeflvnetProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        app.get(data).document.select("script").forEach { script ->
+        val doc = app.get(data).document
+        doc.select("script").forEach { script ->
             val scriptData = script.data()
             if (scriptData.contains("var videos = {")) {
                 val serversRegex = Regex("var videos = (\\{\"SUB\":\\[\\{.*?\\}\\]\\});")
-                val serversplain = serversRegex.find(scriptData)?.destructured?.component1() ?: ""
+                val serversplain = serversRegex.find(scriptData)?.groupValues?.get(1) ?: ""
                 if (serversplain.isNotBlank()) {
-                    val json = parseJson<MainServers>(serversplain)
-                    json.sub.forEach {
-                        loadExtractor(it.code, data, subtitleCallback, callback)
+                    try {
+                        val json = parseJson<MainServers>(serversplain)
+                        json.sub.forEach {
+                            loadExtractor(it.code, data, subtitleCallback, callback)
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
                 }
             }
