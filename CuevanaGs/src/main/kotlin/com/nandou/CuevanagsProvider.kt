@@ -1,8 +1,6 @@
 package com.nandou
 
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.utils.ExtractorApi
-import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
@@ -70,17 +68,16 @@ class CuevanaGsProvider : MainAPI() {
             val episodes = mutableListOf<Episode>()
             val episodeLinks = doc.select("a[href*=/episodio/]")
             
-            episodeLinks.forEach { link ->
+            episodeLinks.forEachIndexed { index, link ->
                 val episodeUrl = fixUrl(link.attr("href"))
-                val episodeNumber = link.selectFirst("span")?.text()?.trim()?.toIntOrNull() ?: episodes.size + 1
-                val episodeName = "Episodio $episodeNumber"
+                val episodeNumber = index + 1
                 
                 episodes.add(
-                    Episode(
-                        data = episodeUrl,
-                        name = episodeName,
-                        episode = episodeNumber
-                    )
+                    newEpisode() {
+                        this.data = episodeUrl
+                        this.name = "Episodio $episodeNumber"
+                        this.episode = episodeNumber
+                    }
                 )
             }
             
