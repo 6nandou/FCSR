@@ -2,6 +2,7 @@ package com.nandou
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 class LaMovieProvider : MainAPI() {
@@ -91,7 +92,9 @@ class LaMovieProvider : MainAPI() {
             val episodes = document.select(".episodios li, .episode-item, .aa-eps-list li").mapNotNull {
                 val epLink = it.selectFirst("a")?.attr("href") ?: return@mapNotNull null
                 val epName = it.text().trim()
-                Episode(epLink, epName)
+                newEpisode(epLink) {
+                    this.name = epName
+                }
             }
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
@@ -115,9 +118,10 @@ class LaMovieProvider : MainAPI() {
     ): Boolean {
         val document = app.get(data).document
         document.select("iframe, .video-player iframe, source").forEach {
-            val src = fixUrl(it.attr("src").ifEmpty { it.attr("data-src") }.ifEmpty { it.attr("src") })
-            if (src.isNotEmpty() && !src.contains("google") && !src.contains("youtube")) {
-                loadExtractor(src, data, subtitleCallback, callback)
+            val src = it.attr("src").ifEmpty { it.attr("data-src") }
+            val finalSrc = fixUrl(src)
+            if (finalSrc.isNotEmpty() && !finalSrc.contains("google") && !finalSrc.contains("youtube")) {
+                loadExtractor(finalSrc, data, subtitleCallback, callback)
             }
         }
         return true
