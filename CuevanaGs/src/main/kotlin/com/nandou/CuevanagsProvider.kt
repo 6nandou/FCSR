@@ -10,7 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.jsoup.nodes.Element
 
-class CuevanaProvider : MainAPI() {
+class CuevanaGsProvider : MainAPI() {
     override var mainUrl = "https://cuevana.gs"
     override var name = "Cuevana"
     override var lang = "es"
