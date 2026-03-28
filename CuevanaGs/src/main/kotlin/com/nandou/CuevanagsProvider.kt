@@ -137,7 +137,7 @@ class CuevanaProvider : MainAPI() {
 suspend fun loadSourceNameExtractor(
     source: String,
     url: String,
-    referer: String? = null,
+    referer: String,
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit,
 ) {
@@ -145,14 +145,13 @@ suspend fun loadSourceNameExtractor(
         CoroutineScope(Dispatchers.IO).launch {
             callback.invoke(
                 newExtractorLink(
-                    "$source [${link.source}]",
-                    "$source [${link.source}]",
-                    link.url,
-                    referer ?: ""
+                    source = "$source [${link.source}]",
+                    name = "$source [${link.source}]",
+                    url = link.url,
+                    referer = referer
                 ) {
                     this.quality = link.quality
                     this.type = link.type
-                    this.referer = link.referer
                     this.headers = link.headers
                     this.extractorData = link.extractorData
                 }
@@ -172,4 +171,7 @@ fun fixHostsLinks(url: String): String {
         .replaceFirst("https://dhtpre.com", "https://vidhidepro.com")
         .replaceFirst("https://filemoon.link", "https://filemoon.sx")
         .replaceFirst("https://sblona.com", "https://watchsb.com")
-        .replaceFirst("https://lulu.st", "
+        .replaceFirst("https://lulu.st", "https://lulustream.com")
+        .replaceFirst("https://uqload.io", "https://uqload.com")
+        .replaceFirst("https://do7go.com", "https://dood.la")
+}
