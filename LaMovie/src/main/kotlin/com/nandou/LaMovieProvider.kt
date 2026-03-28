@@ -34,10 +34,10 @@ class LaMovieProvider : MainAPI() {
 
     private fun Element.toSearchResult(): SearchResponse? {
         val titleElement = this.selectFirst(".popular-card__title h2 a")
-        val title = titleElement?.selectFirst("span")?.text() 
-            ?: titleElement?.selectFirst("p")?.text() 
+        val title = titleElement?.selectFirst("span")?.text()
+            ?: titleElement?.selectFirst("p")?.text()
             ?: return null
-            
+
         val href = fixUrl(titleElement?.attr("href") ?: return null)
         val posterUrl = fixUrl(this.selectFirst(".popular-card__img img")?.attr("src") ?: "")
 
@@ -55,7 +55,7 @@ class LaMovieProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val url = "$mainUrl/search/${query.replace(" ", "+")}"
+        val url = "$mainUrl/search/${query.trim().replace(" ", "+")}"
         val document = app.get(url).document
         return document.select(".popular-card").mapNotNull {
             it.toSearchResult()
@@ -64,14 +64,15 @@ class LaMovieProvider : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
-        
-        val title = document.selectFirst(".movies-full__inside-title h1, .popular-card__title h1")?.text() 
-            ?: document.selectFirst("h1")?.text() 
+
+        val title = document.selectFirst(".popular-card__title h2 a span")?.text()
+            ?: document.selectFirst(".popular-card__title h1")?.text()
+            ?: document.selectFirst("h1")?.text()
             ?: "Sin título"
-            
-        val poster = fixUrl(document.selectFirst(".movies-full__img img, .popular-card__img img")?.attr("src") ?: "")
+
+        val poster = fixUrl(document.selectFirst(".popular-card__img img")?.attr("src") ?: "")
         val description = document.selectFirst(".description, .storyline, p.text-gray-400")?.text()
-        
+
         val isSerie = url.contains("/series/")
 
         return if (isSerie) {
@@ -93,6 +94,6 @@ class LaMovieProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        return false 
+        return false
     }
 }
