@@ -74,7 +74,8 @@ class LaMovieProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val url = "$mainUrl/?s=$query"
+        val cleanQuery = query.trim().replace(" ", "+")
+        val url = "$mainUrl/search/$cleanQuery"
         val document = app.get(url).document
         return document.select("article, .popular-card, .item").mapNotNull {
             it.toSearchResult()
