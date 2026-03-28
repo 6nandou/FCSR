@@ -1,6 +1,9 @@
 package com.nandou
 
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.utils.ExtractorApi
+import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 class CuevanaGsProvider : MainAPI() {
@@ -13,7 +16,7 @@ class CuevanaGsProvider : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val items = ArrayList<HomePageList>()
         val sections = listOf(
-            Pair("$mainUrl", "Estrenos"),
+            Pair(mainUrl, "Estrenos"),
             Pair("$mainUrl/peliculas", "Películas"),
             Pair("$mainUrl/series", "Series")
         )
@@ -21,26 +24,34 @@ class CuevanaGsProvider : MainAPI() {
         sections.forEach { (url, title) ->
             try {
                 val doc = app.get(url).document
-                val res = doc.select("div.group").mapNotNull {
-                    it.toSearchResult()
+                val res = doc.select("div.group").mapNotNull { element ->
+                    element.toSearchResult()
                 }
                 if (res.isNotEmpty()) {
                     items.add(HomePageList(title, res))
                 }
-            } catch (e: Exception) { }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
 
         return newHomePageResponse(items)
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val a = this.selectFirst("a.relative.block") ?: return null
-        val href = fixUrl(a.attr("href"))
+        val linkElement = this.selectFirst("a.relative.block") ?: return null
+        val href = fixUrl(linkElement.attr("href"))
         val title = this.selectFirst("h3")?.text()?.trim() ?: return null
         val posterUrl = fixUrl(this.selectFirst("img")?.attr("src") ?: "")
-
-        return newMovieSearchResponse(title, href, TvType.Movie) { 
-            this.posterUrl = posterUrl 
+        
+        val tvType = if (href.contains("/series/") || href.contains("/animes/")) {
+            TvType.TvSeries
+        } else {
+            TvType.Movie
+        }
+        
+        return newMovieSearchResponse(title, href, tvType) {
+            this.posterUrl = posterUrl
         }
     }
 
@@ -52,11 +63,44 @@ class CuevanaGsProvider : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse {
         val doc = app.get(url).document
-        val title = doc.selectFirst("h1")?.text()?.trim() ?: "Cuevana"
+        val title = doc.selectFirst("h1")?.text()?.trim() ?: ""
         val poster = fixUrl(doc.selectFirst("img.rounded-lg")?.attr("src") ?: "")
         
-        return newMovieLoadResponse(title, url, TvType.Movie, url) { 
-            this.posterUrl = poster 
+        return if (url.contains("/series/") || url.contains("/animes/")) {
+            val episodes = mutableListOf<Episode>()
+            val episodeLinks = doc.select("a[href*=/episodio/]")
+            
+            episodeLinks.forEach { link ->
+                val episodeUrl = fixUrl(link.attr("href"))
+                val episodeNumber = link.selectFirst("span")?.text()?.trim()?.toIntOrNull() ?: episodes.size + 1
+                val episodeName = "Episodio $episodeNumber"
+                
+                episodes.add(
+                    Episode(
+                        data = episodeUrl,
+                        name = episodeName,
+                        episode = episodeNumber
+                    )
+                )
+            }
+            
+            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
+                this.posterUrl = poster
+            }
+        } else {
+            newMovieLoadResponse(title, url, TvType.Movie, url) {
+                this.posterUrl = poster
+            }
         }
+    }
+
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        loadExtractor(data, data, subtitleCallback, callback)
+        return true
     }
 }
