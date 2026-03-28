@@ -33,11 +33,12 @@ class LaMovieProvider : MainAPI() {
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val title = this.selectFirst(".popular-card__title h2 a span")?.text() 
-            ?: this.selectFirst(".popular-card__title h2 a p")?.text() 
+        val titleElement = this.selectFirst(".popular-card__title h2 a")
+        val title = titleElement?.selectFirst("span")?.text() 
+            ?: titleElement?.selectFirst("p")?.text() 
             ?: return null
             
-        val href = fixUrl(this.selectFirst("a")?.attr("href") ?: return null)
+        val href = fixUrl(titleElement?.attr("href") ?: return null)
         val posterUrl = fixUrl(this.selectFirst(".popular-card__img img")?.attr("src") ?: "")
 
         val type = if (href.contains("/series/")) TvType.TvSeries else TvType.Movie
@@ -54,7 +55,8 @@ class LaMovieProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val document = app.get("$mainUrl/?search=$query").document
+        val url = "$mainUrl/search/${query.replace(" ", "+")}"
+        val document = app.get(url).document
         return document.select(".popular-card").mapNotNull {
             it.toSearchResult()
         }
