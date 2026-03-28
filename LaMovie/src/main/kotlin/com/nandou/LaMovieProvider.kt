@@ -17,6 +17,8 @@ class LaMovieProvider : MainAPI() {
         TvType.Anime
     )
 
+    private val userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val items = mutableListOf<HomePageList>()
         val categories = listOf(
@@ -28,12 +30,12 @@ class LaMovieProvider : MainAPI() {
         categories.forEach { (slug, title) ->
             try {
                 val url = if (page <= 1) "$mainUrl/$slug/" else "$mainUrl/$slug/page/$page/"
-                val doc = app.get(url).document
-                val res = doc.select("article, .popular-card, .item").mapNotNull {
+                val res = app.get(url, headers = mapOf("User-Agent" to userAgent)).document
+                val searchResults = res.select("article, .popular-card, .item-movie, .item").mapNotNull {
                     it.toSearchResult()
                 }
-                if (res.isNotEmpty()) {
-                    items.add(HomePageList(title, res))
+                if (searchResults.isNotEmpty()) {
+                    items.add(HomePageList(title, searchResults))
                 }
             } catch (e: Exception) { }
         }
@@ -44,7 +46,7 @@ class LaMovieProvider : MainAPI() {
     private fun Element.toSearchResult(): SearchResponse? {
         val link = this.selectFirst("a") ?: return null
         val href = fixUrl(link.attr("href"))
-        val title = this.selectFirst("h2, h3, .title, .popular-card__title")?.text() 
+        val title = this.selectFirst("h2, h3, .title, .popular-card__title, p")?.text()?.trim()
             ?: this.selectFirst("img")?.attr("alt")
             ?: return null
 
@@ -76,21 +78,21 @@ class LaMovieProvider : MainAPI() {
     override suspend fun search(query: String): List<SearchResponse> {
         val cleanQuery = query.trim().replace(" ", "+")
         val url = "$mainUrl/search/$cleanQuery"
-        val document = app.get(url).document
-        return document.select("article, .popular-card, .item").mapNotNull {
+        val document = app.get(url, headers = mapOf("User-Agent" to userAgent)).document
+        return document.select("article, .popular-card, .item-movie, .item").mapNotNull {
             it.toSearchResult()
         }
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
+        val document = app.get(url, headers = mapOf("User-Agent" to userAgent)).document
         val title = document.selectFirst("h1")?.text()?.trim() ?: "Sin título"
         val poster = fixUrl(document.selectFirst("img.wp-post-image, .poster img, .popular-card__img img")?.attr("src") ?: "")
         val plot = document.selectFirst(".description, .entry-content p, .storyline, .movies-full__inside-main p")?.text()
         val year = document.selectFirst(".year, a[href*='fecha-de-estreno']")?.text()?.filter { it.isDigit() }?.toIntOrNull()
 
         return if (url.contains("/series/") || url.contains("/animes/")) {
-            val episodes = document.select(".episodios li, .episode-item, .aa-eps-list li").mapNotNull {
+            val episodes = document.select(".episodios li, .episode-item, .aa-eps-list li, .list-episodes li").mapNotNull {
                 val epLink = it.selectFirst("a")?.attr("href") ?: return@mapNotNull null
                 val epName = it.text().trim()
                 newEpisode(epLink) {
@@ -117,7 +119,7 @@ class LaMovieProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document = app.get(data).document
+        val document = app.get(data, headers = mapOf("User-Agent" to userAgent)).document
         document.select("iframe, .video-player iframe, source").forEach {
             val src = it.attr("src").ifEmpty { it.attr("data-src") }
             val finalSrc = fixUrl(src)
