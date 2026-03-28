@@ -38,26 +38,5 @@
         "description": "Proveedor IronHentai",
         "url": "https://raw.githubusercontent.com/6nandou/FCSR/builds/IronHentai.cs3",
         "name": "IronHentai"
-    },
-    {
-        "iconUrl": "http://www.google.com/s2/favicons?domain=https://la.movie/",
-        "apiVersion": 1,
-        "repositoryUrl": "https://github.com/6nandou/FCSR",
-        "fileSize": 15546,
-        "status": 1,
-        "language": "es",
-        "authors": [
-            "6nandou"
-        ],
-        "tvTypes": [
-            "Movie",
-            "TvSeries",
-            "Anime"
-        ],
-        "version": -1,
-        "internalName": "LaMovie",
-        "description": "Proveedor La Movie",
-        "url": "https://raw.githubusercontent.com/6nandou/FCSR/builds/LaMovie.cs3",
-        "name": "LaMovie"
     }
 ]
