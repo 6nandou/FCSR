@@ -73,11 +73,12 @@ class CuevanaGsProvider : MainAPI() {
                 val episodeUrl = fixUrl(link.attr("href"))
                 val episodeNumber = index + 1
                 
-                episodes.add(newEpisode() {
-                    this.data = episodeUrl
-                    this.name = "Episodio $episodeNumber"
-                    this.episode = episodeNumber
-                })
+                val episode = Episode(
+                    episodeUrl,
+                    "Episodio $episodeNumber",
+                    episodeNumber
+                )
+                episodes.add(episode)
             }
             
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
