@@ -2,7 +2,6 @@ package com.nandou
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.Qualities
 import org.jsoup.nodes.Element
 
 class LaMovieProvider : MainAPI() {
@@ -30,7 +29,7 @@ class LaMovieProvider : MainAPI() {
             HomePageList(title, items)
         }
 
-        return HomePageResponse(home)
+        return newHomePageResponse(home, false)
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
@@ -40,14 +39,9 @@ class LaMovieProvider : MainAPI() {
 
         val type = if (href.contains("/series/")) TvType.TvSeries else TvType.Movie
 
-        return MovieSearchResponse(
-            title,
-            href,
-            this@LaMovieProvider.name,
-            type,
-            posterUrl,
-            null
-        )
+        return newMovieSearchResponse(title, href, TvType.Movie) {
+            this.posterUrl = posterUrl
+        }
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
@@ -66,13 +60,7 @@ class LaMovieProvider : MainAPI() {
         val isSerie = url.contains("/series/")
 
         return if (isSerie) {
-            val episodes = document.select(".episode-item, .episodes a").map {
-                Episode(
-                    fixUrl(it.attr("href")),
-                    it.text()
-                )
-            }
-            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
+            newTvSeriesLoadResponse(title, url, TvType.TvSeries, emptyList()) {
                 this.posterUrl = poster
                 this.plot = description
             }
@@ -90,23 +78,6 @@ class LaMovieProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document = app.get(data).document
-        
-        document.select("iframe").forEach { iframe ->
-            val src = iframe.attr("src")
-            if (!src.isNullOrBlank()) {
-                callback.invoke(
-                    ExtractorLink(
-                        "Reproductor",
-                        "HD",
-                        fixUrl(src),
-                        mainUrl,
-                        Qualities.Unknown.value,
-                        src.contains(".m3u8")
-                    )
-                )
-            }
-        }
-        return true
+        return false 
     }
 }
