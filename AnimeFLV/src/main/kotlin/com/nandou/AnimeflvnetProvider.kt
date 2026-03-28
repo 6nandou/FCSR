@@ -2,10 +2,9 @@ package com.nandou
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
-import java.util.*
+import org.json.JSONArray
 
 class AnimeflvnetProvider : MainAPI() {
     companion object {
@@ -95,15 +94,29 @@ class AnimeflvnetProvider : MainAPI() {
             data = mapOf("value" to query)
         ).text
         
-        return parseJson<List<SearchObject>>(response).map { searchr ->
-            val title = searchr.title ?: ""
-            val href = "$mainUrl/anime/${searchr.slug}"
-            val image = "$mainUrl/uploads/animes/covers/${searchr.id}.jpg"
-            newAnimeSearchResponse(title, href) {
-                this.posterUrl = fixUrl(image)
-                addDubStatus(getDubStatus(title))
+        val jsonArray = JSONArray(response)
+        val results = mutableListOf<SearchResponse>()
+        
+        for (i in 0 until jsonArray.length()) {
+            val jsonObject = jsonArray.getJSONObject(i)
+            val title = jsonObject.optString("title", "")
+            val slug = jsonObject.optString("slug", "")
+            val id = jsonObject.optString("id", "")
+            
+            if (title.isNotEmpty() && slug.isNotEmpty()) {
+                val href = "$mainUrl/anime/$slug"
+                val image = "$mainUrl/uploads/animes/covers/$id.jpg"
+                
+                results.add(
+                    newAnimeSearchResponse(title, href) {
+                        this.posterUrl = fixUrl(image)
+                        addDubStatus(getDubStatus(title))
+                    }
+                )
             }
         }
+        
+        return results
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
