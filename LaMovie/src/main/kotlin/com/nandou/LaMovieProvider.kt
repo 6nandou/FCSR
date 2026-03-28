@@ -1,6 +1,7 @@
 package com.nandou
 
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
@@ -17,70 +18,84 @@ class LaMovieProvider : MainAPI() {
         TvType.Anime
     )
 
+    private val apiPrefix = "$mainUrl/wp-json/wpf/v1"
     private val userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val items = mutableListOf<HomePageList>()
         val categories = listOf(
-            Pair("peliculas", "Películas"),
-            Pair("series", "Series"),
+            Pair("movies", "Películas"),
+            Pair("tvshows", "Series"),
             Pair("animes", "Animes")
         )
 
         categories.forEach { (slug, title) ->
             try {
-                val url = if (page <= 1) "$mainUrl/$slug/" else "$mainUrl/$slug/page/$page/"
-                val res = app.get(url, headers = mapOf("User-Agent" to userAgent)).document
-                val searchResults = res.select("article, .popular-card, .item-movie, .item").mapNotNull {
-                    it.toSearchResult()
-                }
+                val response = app.get("$apiPrefix/posts?type=$slug&page=$page&limit=20", headers = mapOf("User-Agent" to userAgent)).text
+                val data = tryParseJson<List<LaMovieItem>>(response)
+                
+                val searchResults = data?.map { item ->
+                    if (slug == "movies") {
+                        newMovieSearchResponse(item.title ?: "", item.link ?: "", TvType.Movie) {
+                            this.posterUrl = item.poster
+                        }
+                    } else {
+                        newTvSeriesSearchResponse(item.title ?: "", item.link ?: "", TvType.TvSeries) {
+                            this.posterUrl = item.poster
+                        }
+                    }
+                } ?: emptyList()
+                
                 if (searchResults.isNotEmpty()) {
                     items.add(HomePageList(title, searchResults))
                 }
             } catch (e: Exception) { }
         }
 
+        if (items.isEmpty()) {
+            val doc = app.get(mainUrl, headers = mapOf("User-Agent" to userAgent)).document
+            val fallback = doc.select(".popular-card, article").mapNotNull { it.toSearchResult() }
+            if (fallback.isNotEmpty()) items.add(HomePageList("Tendencias", fallback))
+        }
+
         return newHomePageResponse(items, false)
     }
+
+    data class LaMovieItem(
+        val title: String? = null,
+        val link: String? = null,
+        val poster: String? = null
+    )
 
     private fun Element.toSearchResult(): SearchResponse? {
         val link = this.selectFirst("a") ?: return null
         val href = fixUrl(link.attr("href"))
-        val title = this.selectFirst("h2, h3, .title, .popular-card__title, p")?.text()?.trim()
-            ?: this.selectFirst("img")?.attr("alt")
-            ?: return null
+        val title = this.selectFirst("h2, h3, .title, .popular-card__title")?.text() ?: return null
+        val posterUrl = fixUrl(this.selectFirst("img")?.attr("data-src") ?: this.selectFirst("img")?.attr("src") ?: "")
 
-        val posterUrl = fixUrl(
-            this.selectFirst("img")?.attr("data-src") 
-            ?: this.selectFirst("img")?.attr("src") 
-            ?: ""
-        )
-
-        return when {
-            href.contains("/series/") -> {
-                newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
-                    this.posterUrl = posterUrl
-                }
-            }
-            href.contains("/animes/") -> {
-                newTvSeriesSearchResponse(title, href, TvType.Anime) {
-                    this.posterUrl = posterUrl
-                }
-            }
-            else -> {
-                newMovieSearchResponse(title, href, TvType.Movie) {
-                    this.posterUrl = posterUrl
-                }
-            }
+        return if (href.contains("/series/") || href.contains("/animes/")) {
+            newTvSeriesSearchResponse(title, href, TvType.TvSeries) { this.posterUrl = posterUrl }
+        } else {
+            newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
         }
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val cleanQuery = query.trim().replace(" ", "+")
-        val url = "$mainUrl/search/$cleanQuery"
-        val document = app.get(url, headers = mapOf("User-Agent" to userAgent)).document
-        return document.select("article, .popular-card, .item-movie, .item").mapNotNull {
-            it.toSearchResult()
+        return try {
+            val response = app.get("$apiPrefix/posts?search=$query", headers = mapOf("User-Agent" to userAgent)).text
+            val data = tryParseJson<List<LaMovieItem>>(response)
+            data?.map { item ->
+                val isSerie = item.link?.contains("/series/") == true || item.link?.contains("/animes/") == true
+                if (isSerie) {
+                    newTvSeriesSearchResponse(item.title ?: "", item.link ?: "", TvType.TvSeries) { this.posterUrl = item.poster }
+                } else {
+                    newMovieSearchResponse(item.title ?: "", item.link ?: "", TvType.Movie) { this.posterUrl = item.poster }
+                }
+            } ?: emptyList()
+        } catch (e: Exception) {
+            val cleanQuery = query.trim().replace(" ", "+")
+            val doc = app.get("$mainUrl/search/$cleanQuery", headers = mapOf("User-Agent" to userAgent)).document
+            doc.select(".popular-card, article").mapNotNull { it.toSearchResult() }
         }
     }
 
@@ -88,16 +103,14 @@ class LaMovieProvider : MainAPI() {
         val document = app.get(url, headers = mapOf("User-Agent" to userAgent)).document
         val title = document.selectFirst("h1")?.text()?.trim() ?: "Sin título"
         val poster = fixUrl(document.selectFirst("img.wp-post-image, .poster img, .popular-card__img img")?.attr("src") ?: "")
-        val plot = document.selectFirst(".description, .entry-content p, .storyline, .movies-full__inside-main p")?.text()
+        val plot = document.selectFirst(".description, .entry-content p, .storyline")?.text()
         val year = document.selectFirst(".year, a[href*='fecha-de-estreno']")?.text()?.filter { it.isDigit() }?.toIntOrNull()
 
         return if (url.contains("/series/") || url.contains("/animes/")) {
-            val episodes = document.select(".episodios li, .episode-item, .aa-eps-list li, .list-episodes li").mapNotNull {
+            val episodes = document.select(".episodios li, .episode-item, .aa-eps-list li").mapNotNull {
                 val epLink = it.selectFirst("a")?.attr("href") ?: return@mapNotNull null
                 val epName = it.text().trim()
-                newEpisode(epLink) {
-                    this.name = epName
-                }
+                newEpisode(epLink) { this.name = epName }
             }
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
