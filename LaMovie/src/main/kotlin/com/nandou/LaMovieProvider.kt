@@ -23,7 +23,7 @@ class LaMovieProvider : MainAPI() {
 
         val home = categories.map { (url, title) ->
             val document = app.get(url).document
-            val items = document.select("div.item, div.movie-item").mapNotNull {
+            val items = document.select(".popular-card").mapNotNull {
                 it.toSearchResult()
             }
             HomePageList(title, items)
@@ -33,29 +33,42 @@ class LaMovieProvider : MainAPI() {
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val title = this.selectFirst(".title, h3, .name")?.text() ?: return null
+        val title = this.selectFirst(".popular-card__title h2 a span")?.text() 
+            ?: this.selectFirst(".popular-card__title h2 a p")?.text() 
+            ?: return null
+            
         val href = fixUrl(this.selectFirst("a")?.attr("href") ?: return null)
-        val posterUrl = fixUrl(this.selectFirst("img")?.attr("src") ?: "")
+        val posterUrl = fixUrl(this.selectFirst(".popular-card__img img")?.attr("src") ?: "")
 
         val type = if (href.contains("/series/")) TvType.TvSeries else TvType.Movie
 
-        return newMovieSearchResponse(title, href, TvType.Movie) {
-            this.posterUrl = posterUrl
+        return if (type == TvType.TvSeries) {
+            newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
+                this.posterUrl = posterUrl
+            }
+        } else {
+            newMovieSearchResponse(title, href, TvType.Movie) {
+                this.posterUrl = posterUrl
+            }
         }
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
         val document = app.get("$mainUrl/?search=$query").document
-        return document.select("div.item").mapNotNull {
+        return document.select(".popular-card").mapNotNull {
             it.toSearchResult()
         }
     }
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
-        val title = document.selectFirst("h1, .movies-full__inside-title")?.text() ?: "Sin título"
-        val poster = fixUrl(document.selectFirst("img")?.attr("src") ?: "")
-        val description = document.selectFirst(".description, .storyline")?.text()
+        
+        val title = document.selectFirst(".movies-full__inside-title h1, .popular-card__title h1")?.text() 
+            ?: document.selectFirst("h1")?.text() 
+            ?: "Sin título"
+            
+        val poster = fixUrl(document.selectFirst(".movies-full__img img, .popular-card__img img")?.attr("src") ?: "")
+        val description = document.selectFirst(".description, .storyline, p.text-gray-400")?.text()
         
         val isSerie = url.contains("/series/")
 
