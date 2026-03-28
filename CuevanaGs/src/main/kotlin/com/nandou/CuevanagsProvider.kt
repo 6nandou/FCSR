@@ -86,11 +86,10 @@ class CuevanaGsProvider : MainAPI() {
                 val episodeNumber = index + 1
                 
                 episodes.add(
-                    Episode(
-                        episodeUrl,
-                        "Episodio $episodeNumber",
-                        episodeNumber
-                    )
+                    newEpisode(episodeUrl) {
+                        this.name = "Episodio $episodeNumber"
+                        this.episode = episodeNumber
+                    }
                 )
             }
             
