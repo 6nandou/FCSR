@@ -11,31 +11,32 @@ class CuevanaGsProvider : MainAPI() {
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val categories = listOf(
+        val items = ArrayList<HomePageList>()
+        val sections = listOf(
+            Pair("$mainUrl", "Estrenos"),
             Pair("$mainUrl/peliculas", "Películas"),
-            Pair("$mainUrl/series", "Series"),
-            Pair("$mainUrl/animes", "Animes")
+            Pair("$mainUrl/series", "Series")
         )
-        
-        val items = categories.mapNotNull { (url, title) ->
-            val doc = app.get(url).document
-            val cards = doc.select("div.relative.group, article, .item, .post").mapNotNull {
-                it.toSearchResult()
-            }
-            if (cards.isNotEmpty()) HomePageList(title, cards) else null
+
+        sections.forEach { (url, title) ->
+            try {
+                val doc = app.get(url).document
+                val res = doc.select("div.group").mapNotNull {
+                    it.toSearchResult()
+                }
+                if (res.isNotEmpty()) {
+                    items.add(HomePageList(title, res))
+                }
+            } catch (e: Exception) { }
         }
 
         return newHomePageResponse(items)
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val a = this.selectFirst("a[href*='/pelicula/'], a[href*='/series/'], a[href*='/animes/']") ?: return null
+        val a = this.selectFirst("a.relative.block") ?: return null
         val href = fixUrl(a.attr("href"))
-        
-        val title = this.selectFirst("h3, h2, .title")?.text()?.trim() 
-            ?: this.selectFirst("img")?.attr("alt")?.trim() 
-            ?: return null
-            
+        val title = this.selectFirst("h3")?.text()?.trim() ?: return null
         val posterUrl = fixUrl(this.selectFirst("img")?.attr("src") ?: "")
 
         return newMovieSearchResponse(title, href, TvType.Movie) { 
@@ -44,14 +45,15 @@ class CuevanaGsProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val doc = app.get("$mainUrl/?s=${query.replace(" ", "+")}").document
-        return doc.select("div.relative.group, article, .item").mapNotNull { it.toSearchResult() }
+        val url = "$mainUrl/?s=${query.replace(" ", "+")}"
+        val doc = app.get(url).document
+        return doc.select("div.group").mapNotNull { it.toSearchResult() }
     }
 
     override suspend fun load(url: String): LoadResponse {
         val doc = app.get(url).document
-        val title = doc.selectFirst("h1")?.text()?.trim() ?: "Sin título"
-        val poster = fixUrl(doc.selectFirst("img.rounded-lg, .poster img")?.attr("src") ?: "")
+        val title = doc.selectFirst("h1")?.text()?.trim() ?: "Cuevana"
+        val poster = fixUrl(doc.selectFirst("img.rounded-lg")?.attr("src") ?: "")
         
         return newMovieLoadResponse(title, url, TvType.Movie, url) { 
             this.posterUrl = poster 
