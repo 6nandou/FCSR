@@ -1,7 +1,6 @@
-package com.lagradost.cloudstream3.movieproviders
+package com.nandou
 
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.cloudstream3.utils.newExtractorLink
@@ -39,7 +38,6 @@ class CuevanaGsProvider : MainAPI() {
             items.add(HomePageList(name, home))
         }
 
-        if (items.isEmpty()) throw ErrorLoadingException()
         return newHomePageResponse(items)
     }
 
@@ -49,71 +47,33 @@ class CuevanaGsProvider : MainAPI() {
         val title = this.selectFirst("h3")?.text()?.trim() ?: return null
         val posterUrl = fixUrl(this.selectFirst("img")?.attr("src") ?: "")
 
-        val type = when {
-            href.contains("/series/") -> TvType.TvSeries
-            href.contains("/animes/") -> TvType.Anime
-            else -> TvType.Movie
-        }
+        val type = if (href.contains("/series/") || href.contains("/animes/")) TvType.TvSeries else TvType.Movie
 
         return if (type == TvType.Movie) {
-            newMovieSearchResponse(title, href, type) {
-                this.posterUrl = posterUrl
-            }
+            newMovieSearchResponse(title, href, type) { this.posterUrl = posterUrl }
         } else {
-            newTvSeriesSearchResponse(title, href, type) {
-                this.posterUrl = posterUrl
-            }
+            newTvSeriesSearchResponse(title, href, type) { this.posterUrl = posterUrl }
         }
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
         val url = "$mainUrl/?s=${query.replace(" ", "+")}"
         val document = app.get(url).document
-
-        return document.select("div.relative.group").mapNotNull {
-            it.toSearchResult()
-        }
+        return document.select("div.relative.group").mapNotNull { it.toSearchResult() }
     }
 
     override suspend fun load(url: String): LoadResponse? {
-        val soup = app.get(url, timeout = 120).document
+        val soup = app.get(url).document
         val title = soup.selectFirst("h1")?.text()?.trim() ?: return null
-        val description = soup.selectFirst("p.line-clamp-3")?.text()?.trim()
         val poster = fixUrl(soup.selectFirst("img.rounded-lg")?.attr("src") ?: "")
-        val year = soup.selectFirst("span.bg-blue-600")?.text()?.filter { it.isDigit() }?.toIntOrNull()
         
-        val tags = soup.select("a[href*='/genero/']").map { it.text() }
-        
-        val recommendations = soup.select("div.relative.group").mapNotNull { element ->
-            element.toSearchResult()
-        }
-
-        val trailer = soup.selectFirst("iframe[src*='youtube.com']")?.attr("src") ?: ""
-
         return if (url.contains("/series/") || url.contains("/animes/")) {
             val episodes = soup.select("a[href*='/episodio/']").map {
-                val epHref = fixUrl(it.attr("href"))
-                val name = it.text().trim()
-                newEpisode(epHref) {
-                    this.name = name
-                }
+                newEpisode(fixUrl(it.attr("href"))) { this.name = it.text().trim() }
             }
-            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
-                this.posterUrl = poster
-                this.plot = description
-                this.year = year
-                this.tags = tags
-                this.recommendations = recommendations
-            }
+            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) { this.posterUrl = poster }
         } else {
-            newMovieLoadResponse(title, url, TvType.Movie, url) {
-                this.posterUrl = poster
-                this.plot = description
-                this.year = year
-                this.tags = tags
-                this.recommendations = recommendations
-                if (trailer.isNotBlank()) addTrailer(trailer)
-            }
+            newMovieLoadResponse(title, url, TvType.Movie, url) { this.posterUrl = poster }
         }
     }
 
@@ -124,11 +84,9 @@ class CuevanaGsProvider : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
-        
         document.select("iframe").forEach {
             val src = fixUrl(it.attr("src"))
-            val finalUrl = fixHostsLinks(src)
-            loadSourceNameExtractor("Cuevana", finalUrl, mainUrl, subtitleCallback, callback)
+            loadSourceNameExtractor("Cuevana", src, mainUrl, subtitleCallback, callback)
         }
         return true
     }
@@ -145,33 +103,16 @@ suspend fun loadSourceNameExtractor(
         CoroutineScope(Dispatchers.IO).launch {
             callback.invoke(
                 newExtractorLink(
-                    source = "$source [${link.source}]",
-                    name = "$source [${link.source}]",
-                    url = link.url,
-                    referer = referer
-                ) {
-                    this.quality = link.quality
-                    this.type = link.type
-                    this.headers = link.headers
-                    this.extractorData = link.extractorData
-                }
+                    source,
+                    source,
+                    link.url,
+                    referer,
+                    link.quality,
+                    link.type,
+                    link.headers,
+                    link.extractorData
+                )
             )
         }
     }
-}
-
-fun fixHostsLinks(url: String): String {
-    return url
-        .replaceFirst("https://hglink.to", "https://streamwish.to")
-        .replaceFirst("https://swdyu.com", "https://streamwish.to")
-        .replaceFirst("https://cybervynx.com", "https://streamwish.to")
-        .replaceFirst("https://dumbalag.com", "https://streamwish.to")
-        .replaceFirst("https://mivalyo.com", "https://vidhidepro.com")
-        .replaceFirst("https://dinisglows.com", "https://vidhidepro.com")
-        .replaceFirst("https://dhtpre.com", "https://vidhidepro.com")
-        .replaceFirst("https://filemoon.link", "https://filemoon.sx")
-        .replaceFirst("https://sblona.com", "https://watchsb.com")
-        .replaceFirst("https://lulu.st", "https://lulustream.com")
-        .replaceFirst("https://uqload.io", "https://uqload.com")
-        .replaceFirst("https://do7go.com", "https://dood.la")
 }
