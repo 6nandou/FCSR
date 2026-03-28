@@ -12,78 +12,97 @@ class LaMovieProvider : MainAPI() {
     override val hasQuickSearch = true
     override val supportedTypes = setOf(
         TvType.Movie,
-        TvType.TvSeries
+        TvType.TvSeries,
+        TvType.Anime
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val items = mutableListOf<HomePageList>()
         val categories = listOf(
-            Pair("$mainUrl/peliculas", "Películas"),
-            Pair("$mainUrl/series", "Series")
+            Pair("peliculas", "Películas"),
+            Pair("series", "Series"),
+            Pair("animes", "Animes")
         )
 
-        val home = categories.map { (url, title) ->
-            val document = app.get(url).document
-            val items = document.select(".popular-card").mapNotNull {
-                it.toSearchResult()
-            }
-            HomePageList(title, items)
+        categories.forEach { (slug, title) ->
+            try {
+                val url = if (page <= 1) "$mainUrl/$slug/" else "$mainUrl/$slug/page/$page/"
+                val doc = app.get(url).document
+                val res = doc.select("article, .popular-card, .item").mapNotNull {
+                    it.toSearchResult()
+                }
+                if (res.isNotEmpty()) {
+                    items.add(HomePageList(title, res))
+                }
+            } catch (e: Exception) { }
         }
 
-        return newHomePageResponse(home, false)
+        return newHomePageResponse(items, false)
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val titleElement = this.selectFirst(".popular-card__title h2 a")
-        val title = titleElement?.selectFirst("span")?.text()
-            ?: titleElement?.selectFirst("p")?.text()
+        val link = this.selectFirst("a") ?: return null
+        val href = fixUrl(link.attr("href"))
+        val title = this.selectFirst("h2, h3, .title, .popular-card__title")?.text() 
+            ?: this.selectFirst("img")?.attr("alt")
             ?: return null
 
-        val href = fixUrl(titleElement?.attr("href") ?: return null)
-        val posterUrl = fixUrl(this.selectFirst(".popular-card__img img")?.attr("src") ?: "")
+        val posterUrl = fixUrl(
+            this.selectFirst("img")?.attr("data-src") 
+            ?: this.selectFirst("img")?.attr("src") 
+            ?: ""
+        )
 
-        val type = if (href.contains("/series/")) TvType.TvSeries else TvType.Movie
-
-        return if (type == TvType.TvSeries) {
-            newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
-                this.posterUrl = posterUrl
+        return when {
+            href.contains("/series/") -> {
+                newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
+                    this.posterUrl = posterUrl
+                }
             }
-        } else {
-            newMovieSearchResponse(title, href, TvType.Movie) {
-                this.posterUrl = posterUrl
+            href.contains("/animes/") -> {
+                newTvSeriesSearchResponse(title, href, TvType.Anime) {
+                    this.posterUrl = posterUrl
+                }
+            }
+            else -> {
+                newMovieSearchResponse(title, href, TvType.Movie) {
+                    this.posterUrl = posterUrl
+                }
             }
         }
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val url = "$mainUrl/search/${query.trim().replace(" ", "+")}"
+        val url = "$mainUrl/?s=$query"
         val document = app.get(url).document
-        return document.select(".popular-card").mapNotNull {
+        return document.select("article, .popular-card, .item").mapNotNull {
             it.toSearchResult()
         }
     }
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
+        val title = document.selectFirst("h1")?.text()?.trim() ?: "Sin título"
+        val poster = fixUrl(document.selectFirst("img.wp-post-image, .poster img, .popular-card__img img")?.attr("src") ?: "")
+        val plot = document.selectFirst(".description, .entry-content p, .storyline, .movies-full__inside-main p")?.text()
+        val year = document.selectFirst(".year, a[href*='fecha-de-estreno']")?.text()?.filter { it.isDigit() }?.toIntOrNull()
 
-        val title = document.selectFirst(".popular-card__title h2 a span")?.text()
-            ?: document.selectFirst(".popular-card__title h1")?.text()
-            ?: document.selectFirst("h1")?.text()
-            ?: "Sin título"
-
-        val poster = fixUrl(document.selectFirst(".popular-card__img img")?.attr("src") ?: "")
-        val description = document.selectFirst(".description, .storyline, p.text-gray-400")?.text()
-
-        val isSerie = url.contains("/series/")
-
-        return if (isSerie) {
-            newTvSeriesLoadResponse(title, url, TvType.TvSeries, emptyList()) {
+        return if (url.contains("/series/") || url.contains("/animes/")) {
+            val episodes = document.select(".episodios li, .episode-item, .aa-eps-list li").mapNotNull {
+                val epLink = it.selectFirst("a")?.attr("href") ?: return@mapNotNull null
+                val epName = it.text().trim()
+                Episode(epLink, epName)
+            }
+            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
-                this.plot = description
+                this.plot = plot
+                this.year = year
             }
         } else {
             newMovieLoadResponse(title, url, TvType.Movie, url) {
                 this.posterUrl = poster
-                this.plot = description
+                this.plot = plot
+                this.year = year
             }
         }
     }
@@ -94,6 +113,13 @@ class LaMovieProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        return false
+        val document = app.get(data).document
+        document.select("iframe, .video-player iframe, source").forEach {
+            val src = fixUrl(it.attr("src").ifEmpty { it.attr("data-src") }.ifEmpty { it.attr("src") })
+            if (src.isNotEmpty() && !src.contains("google") && !src.contains("youtube")) {
+                loadExtractor(src, data, subtitleCallback, callback)
+            }
+        }
+        return true
     }
 }
