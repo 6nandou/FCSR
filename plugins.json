@@ -40,23 +40,5 @@
         "description": "Proveedor Cuevana.gs",
         "url": "https://raw.githubusercontent.com/6nandou/FCSR/builds/CuevanaGs.cs3",
         "name": "CuevanaGs"
-    },
-    {
-        "iconUrl": "http://www.google.com/s2/favicons?domain=https://ironhentai.com/",
-        "apiVersion": 1,
-        "repositoryUrl": "https://github.com/6nandou/FCSR",
-        "status": 1,
-        "language": "es",
-        "authors": [
-            "6nandou"
-        ],
-        "tvTypes": [
-            "NSFW"
-        ],
-        "version": -1,
-        "internalName": "IronHentai",
-        "description": "Proveedor IronHentai",
-        "url": "https://raw.githubusercontent.com/6nandou/FCSR/builds/IronHentai.cs3",
-        "name": "IronHentai"
     }
 ]
