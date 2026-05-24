@@ -4,7 +4,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 cloudstream {
     authors = listOf("6nandou")
     language = "es"
-    description = "Proveedor AnimeAV1"
+    description = "Proveedor Subtitulado AnimeAV1"
     status = 1
     tvTypes = listOf(
         "Anime",
