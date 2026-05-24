@@ -8,7 +8,7 @@ import java.lang.Exception
 
 class Animeav1Provider : MainAPI() {
     override var mainUrl = "https://animeav1.com"
-    override var name = "Sub_AnimeAV1"
+    override var name = "AnimeAV1"
     override var lang = "es"
     override val hasMainPage = true
     override val hasChromecastSupport = true
@@ -147,25 +147,31 @@ class Animeav1Provider : MainAPI() {
     ): Boolean {
         try {
             val doc = app.get(data).document
-            val downloadLinks = doc.select("div[data-dialog-content] a[href], div[role='dialog'] a[href], a.btn-soft[href]")
+            var foundLinks = false
             
-            if (downloadLinks.isNotEmpty()) {
-                downloadLinks.forEach { link ->
-                    val typeBadge = link.select("span").text()
-                    if (typeBadge.contains("SUB")) {
-                        val src = link.attr("href")
-                        if (src.isNotBlank()) {
-                            val fixedSrc = fixUrl(src)
-                            if (fixedSrc.startsWith("http") && 
-                                !fixedSrc.contains("google") && 
-                                !fixedSrc.contains("facebook") &&
-                                !fixedSrc.contains("mirror_direct")) {
-                                loadExtractor(fixedSrc, data, subtitleCallback, callback)
-                            }
+            val urlRegex = Regex("""https?://(?:www\.)?(?:pixeldrain\.com/u/|mega\.nz/file/|mp4upload\.com/|1fichier\.com/\?[a-zA-Z0-9]+)[^\s"']*""")
+            
+            doc.select("script").forEach { script ->
+                val scriptData = script.data()
+                if (scriptData.contains("pixeldrain") || scriptData.contains("mega.nz") || scriptData.contains("mp4upload")) {
+                    val matches = urlRegex.findAll(scriptData)
+                    matches.forEach { match ->
+                        val url = match.value
+                        
+                        val isDub = scriptData.substring(
+                            maxOf(0, scriptData.indexOf(url) - 150), 
+                            scriptData.indexOf(url)
+                        ).contains("DUB", ignoreCase = true)
+                        
+                        if (!isDub) {
+                            loadExtractor(url, data, subtitleCallback, callback)
+                            foundLinks = true
                         }
                     }
                 }
-            } else {
+            }
+            
+            if (!foundLinks) {
                 val defaultIframe = doc.selectFirst("iframe[title='Episodio Embebido'], iframe.aspect-video, #iframe-element, .video-player iframe")?.attr("src")
                 if (!defaultIframe.isNullOrBlank()) {
                     loadExtractor(fixUrl(defaultIframe), data, subtitleCallback, callback)
