@@ -67,11 +67,12 @@ subprojects {
         }
     }
 
-    dependencies {
-        val apk = configurations.findByName("apk") ?: configurations.create("apk")
-        val implementation = configurations.getByName("implementation")
+    configurations {
+        maybeCreate("apk")
+    }
 
-        apk("com.lagradost:cloudstream3:pre-release")
+    dependencies {
+        "apk"("com.lagradost:cloudstream3:pre-release")
 
         implementation(kotlin("stdlib"))
         implementation("com.github.Blatzar:NiceHttp:0.4.13")
