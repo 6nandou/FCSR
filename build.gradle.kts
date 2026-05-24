@@ -74,11 +74,11 @@ subprojects {
     dependencies {
         "apk"("com.lagradost:cloudstream3:pre-release")
 
-        implementation(kotlin("stdlib"))
-        implementation("com.github.Blatzar:NiceHttp:0.4.13")
-        implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.16.0")
-        implementation("org.jsoup:jsoup:1.18.3")
-        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
-        implementation("org.mozilla:rhino:1.7.14")
+        "implementation"(kotlin("stdlib"))
+        "implementation"("com.github.Blatzar:NiceHttp:0.4.13")
+        "implementation"("com.fasterxml.jackson.module:jackson-module-kotlin:2.16.0")
+        "implementation"("org.jsoup:jsoup:1.18.3")
+        "implementation"("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
+        "implementation"("org.mozilla:rhino:1.7.14")
     }
 }
