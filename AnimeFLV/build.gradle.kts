@@ -12,4 +12,6 @@ cloudstream {
         "AnimeMovie"
     )
     iconUrl = "http://www.google.com/s2/favicons?domain=https://www3.animeflv.net/"
+    version = 1
+    versionName = "1.0.0"
 }
