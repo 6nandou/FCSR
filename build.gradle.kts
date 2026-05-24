@@ -7,6 +7,7 @@ buildscript {
         mavenCentral()
         maven("https://jitpack.io")
     }
+
     dependencies {
         classpath("com.android.tools.build:gradle:8.2.2") 
         classpath("com.github.recloudstream:gradle:master-SNAPSHOT")
@@ -40,6 +41,7 @@ subprojects {
 
     android {
         namespace = "com.nandou.animeflv" 
+        
         compileSdkVersion(35)
 
         defaultConfig {
@@ -63,5 +65,19 @@ subprojects {
                 )
             }
         }
+    }
+
+    dependencies {
+        val apk = configurations.findByName("apk") ?: configurations.create("apk")
+        val implementation = configurations.getByName("implementation")
+
+        apk("com.lagradost:cloudstream3:pre-release")
+
+        implementation(kotlin("stdlib"))
+        implementation("com.github.Blatzar:NiceHttp:0.4.13")
+        implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.16.0")
+        implementation("org.jsoup:jsoup:1.18.3")
+        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
+        implementation("org.mozilla:rhino:1.7.14")
     }
 }
