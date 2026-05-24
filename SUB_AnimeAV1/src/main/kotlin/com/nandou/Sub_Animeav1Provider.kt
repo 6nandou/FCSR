@@ -8,7 +8,7 @@ import java.lang.Exception
 
 class Animeav1Provider : MainAPI() {
     override var mainUrl = "https://animeav1.com"
-    override var name = "AnimeAV1"
+    override var name = "Sub_AnimeAV1"
     override var lang = "es"
     override val hasMainPage = true
     override val hasChromecastSupport = true
@@ -107,16 +107,44 @@ class Animeav1Provider : MainAPI() {
         val poster = doc.selectFirst("img.poster, div.cover img, .portada img")?.attr("src") ?: ""
         val description = doc.selectFirst("p.synopsis, div.description p, .sinopsis")?.text()
         
-        doc.select("a[href*=/media/], ul#eps li > a").forEach { epLink ->
-            val epUrl = epLink.attr("href")
-            val epNum = epUrl.trimEnd('/').substringAfterLast("/").toIntOrNull()
-            if (epNum != null) {
-                episodes.add(
-                    newEpisode(fixUrl(epUrl)) {
-                        this.episode = epNum
-                        this.name = "Episodio $epNum"
+        val epRegex = Regex("""/media/[^\s"'\\]+""")
+        
+        doc.select("script").forEach { script ->
+            val scriptData = script.data()
+            if (scriptData.contains("/media/")) {
+                epRegex.findAll(scriptData).forEach { match ->
+                    val epUrl = match.value
+                    val epNum = epUrl.trimEnd('/').substringAfterLast("/").toIntOrNull()
+                    if (epNum != null) {
+                        val isDuplicate = episodes.any { it.episode == epNum }
+                        if (!isDuplicate) {
+                            episodes.add(
+                                newEpisode(fixUrl(epUrl)) {
+                                    this.episode = epNum
+                                    this.name = "Episodio $epNum"
+                                }
+                            )
+                        }
                     }
-                )
+                }
+            }
+        }
+
+        if (episodes.isEmpty()) {
+            doc.select("a[href*=/media/], ul#eps li > a").forEach { epLink ->
+                val epUrl = epLink.attr("href")
+                val epNum = epUrl.trimEnd('/').substringAfterLast("/").toIntOrNull()
+                if (epNum != null) {
+                    val isDuplicate = episodes.any { it.episode == epNum }
+                    if (!isDuplicate) {
+                        episodes.add(
+                            newEpisode(fixUrl(epUrl)) {
+                                this.episode = epNum
+                                    this.name = "Episodio $epNum"
+                            }
+                        )
+                    }
+                }
             }
         }
         
