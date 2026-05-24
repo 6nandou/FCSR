@@ -10,4 +10,5 @@ cloudstream {
           "NSFW"
     )
     iconUrl = "http://www.google.com/s2/favicons?domain=https://ironhentai.com/"
+    version = 1
 }
