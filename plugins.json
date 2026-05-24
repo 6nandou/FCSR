@@ -20,5 +20,25 @@
         "description": "Proveedor AnimeFLV",
         "url": "https://raw.githubusercontent.com/6nandou/FCSR/builds/AnimeFLV.cs3",
         "name": "AnimeFLV"
+    },
+    {
+        "iconUrl": "http://www.google.com/s2/favicons?domain=https://ironhentai.com/",
+        "fileHash": "sha256-696200857a961984e39dd48fd277dad3a6aefd9ecf7b4857db4689a0de6ba86e",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/6nandou/FCSR",
+        "fileSize": 11893,
+        "status": 1,
+        "language": "es",
+        "authors": [
+            "6nandou"
+        ],
+        "tvTypes": [
+            "NSFW"
+        ],
+        "version": 1,
+        "internalName": "IronH",
+        "description": "Proveedor IronHentai",
+        "url": "https://raw.githubusercontent.com/6nandou/FCSR/builds/IronH.cs3",
+        "name": "IronH"
     }
 ]
