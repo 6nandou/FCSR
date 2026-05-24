@@ -27,7 +27,18 @@ class Animeav1Provider : MainAPI() {
         TvType.OVA,
         TvType.Anime,
     )
-
+    
+    override val mainPage = mainPageOf(
+        "catalogo?status=emision" to "En emision",
+        "catalogo?genre=accion" to "Accion",
+        "catalogo?genre=comedia&genre=romance" to "RomCom",
+        "catalogo?genre=romance" to "Romance",
+        "catalogo?genre=comedia" to "Comedia",
+        "catalogo?genre=fantasia" to "Fantasia",
+        "catalogo?genre=shounen" to "Shounen",
+        "catalogo?genre=ecchi" to "Ecchi",
+    )
+    
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val items = ArrayList<HomePageList>()
         
@@ -74,6 +85,7 @@ class Animeav1Provider : MainAPI() {
         }
         return searchResults
     }
+
     override suspend fun load(url: String): LoadResponse {
         val doc = app.get(url).document
         val episodes = ArrayList<Episode>()
@@ -115,7 +127,6 @@ class Animeav1Provider : MainAPI() {
             
             val serverButtons = doc.select("div.flex-1.flex-wrap button, button.btn")
             serverButtons.forEach { button ->
-                val serverName = button.text().trim()
                 val alternativeUrl = button.attr("data-src").ifBlank { button.attr("data-video") }
                 
                 if (alternativeUrl.isNotBlank()) {
