@@ -5,8 +5,8 @@ import com.lagradost.cloudstream3.plugins.Plugin
 import android.content.Context
 
 @CloudstreamPlugin
-class Sub_Animeav1Plugin: Plugin() {
-    override fun loadPlugin(context: Context) {
+class Dob_Animeav1Plugin: Plugin() {
+    override fun load(context: Context) {
         registerMainAPI(Animeav1DubProvider())
     }
 }
