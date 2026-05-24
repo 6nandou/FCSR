@@ -7,6 +7,6 @@ import android.content.Context
 @CloudstreamPlugin
 class IronHPlugin: Plugin() {
     override fun load(context: Context) {
-        registerMainAPI(IronHentaiProvider())
+        registerMainAPI(IronHProvider())
     }
 }
