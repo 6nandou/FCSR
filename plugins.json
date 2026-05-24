@@ -23,10 +23,10 @@
     },
     {
         "iconUrl": "http://www.google.com/s2/favicons?domain=https://animeav1.com/",
-        "fileHash": "sha256-9151a3360e13e1b8c09f2dc089080227a74a42a73766f26a947bc21f6ad286b6",
+        "fileHash": "sha256-a4aab8d26c2c60da0ad9f4c9226acd8663831066690dcf397a1d2368df79688e",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/6nandou/FCSR",
-        "fileSize": 14869,
+        "fileSize": 15002,
         "status": 1,
         "language": "es",
         "authors": [
