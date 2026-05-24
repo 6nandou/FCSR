@@ -198,7 +198,6 @@ class Animeav1Provider : MainAPI() {
         try {
             val doc = app.get(data).document
             var foundLinks = false
-            
             val urlRegex = Regex("""https?://(?:www\.)?(?:pixeldrain\.com/u/|mega\.nz/file/|mp4upload\.com/|1fichier\.com/\?[a-zA-Z0-9]+)[^\s"']*""")
             
             doc.select("script").forEach { script ->
@@ -207,7 +206,6 @@ class Animeav1Provider : MainAPI() {
                     val matches = urlRegex.findAll(scriptData)
                     matches.forEach { match ->
                         val url = match.value
-                        
                         val isDub = scriptData.substring(
                             maxOf(0, scriptData.indexOf(url) - 150), 
                             scriptData.indexOf(url)
@@ -222,9 +220,26 @@ class Animeav1Provider : MainAPI() {
             }
             
             if (!foundLinks) {
-                val defaultIframe = doc.selectFirst("iframe[title='Episodio Embebido'], iframe.aspect-video, #iframe-element, .video-player iframe")?.attr("src")
-                if (!defaultIframe.isNullOrBlank()) {
-                    loadExtractor(fixUrl(defaultIframe), data, subtitleCallback, callback)
+                val iframeUrl = doc.selectFirst("iframe[title='Episodio Embebido'], iframe.aspect-video, #iframe-element, .video-player iframe, iframe[src*=/media/]")?.attr("src")
+                if (!iframeUrl.isNullOrBlank()) {
+                    val fixedIframeUrl = fixUrl(iframeUrl)
+                    val iframeDoc = app.get(fixedIframeUrl).document
+                    
+                    iframeDoc.select("script").forEach { script ->
+                        val scriptData = script.data()
+                        if (scriptData.contains("pixeldrain") || scriptData.contains("mega.nz") || scriptData.contains("mp4upload")) {
+                            val matches = urlRegex.findAll(scriptData)
+                            matches.forEach { match ->
+                                val url = match.value
+                                loadExtractor(url, fixedIframeUrl, subtitleCallback, callback)
+                                foundLinks = true
+                            }
+                        }
+                    }
+                    
+                    if (!foundLinks) {
+                        loadExtractor(fixedIframeUrl, data, subtitleCallback, callback)
+                    }
                 }
             }
         } catch (e: Exception) {
