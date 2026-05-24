@@ -77,7 +77,7 @@ class Animeav1Provider : MainAPI() {
     override suspend fun search(query: String): List<SearchResponse> {
         val searchResults = mutableListOf<SearchResponse>()
         try {
-            val doc = app.get("$mainUrl/?search=$query").document
+            val doc = app.get("$mainUrl/catalogo?search=$query").document
             doc.select("div.grid article, .search-results a, ul.directorio li article, article").forEach { element ->
                 val result = element.toSearchResult()
                 if (result != null) {
