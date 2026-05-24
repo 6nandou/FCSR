@@ -8,7 +8,7 @@ import java.lang.Exception
 
 class Animeav1Provider : MainAPI() {
     override var mainUrl = "https://animeav1.com"
-    override var name = "AnimeAV1"
+    override var name = "Sub_AnimeAV1"
     override var lang = "es"
     override val hasMainPage = true
     override val hasChromecastSupport = true
