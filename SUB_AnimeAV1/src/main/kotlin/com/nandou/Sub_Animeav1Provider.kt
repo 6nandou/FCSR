@@ -138,7 +138,7 @@ class Animeav1Provider : MainAPI() {
                 val isAlreadyAdded = episodes.any { it.episode == i }
                 if (!isAlreadyAdded) {
                     episodes.add(
-                        newEpisode("$mainUrl/ver/$slug-$i") {
+                        newEpisode("$mainUrl/ver/$slug/$i") {
                             this.episode = i
                             this.name = "Episodio $i"
                         }
@@ -151,7 +151,7 @@ class Animeav1Provider : MainAPI() {
         
         if (sortedEpisodes.isEmpty()) {
             episodes.add(
-                newEpisode("$mainUrl/ver/$slug-1") {
+                newEpisode("$mainUrl/ver/$slug/1") {
                     this.name = "Episodio 1"
                     this.episode = 1
                 }
