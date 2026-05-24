@@ -3,20 +3,12 @@ package com.nandou
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
-import org.jsoup.nodes.Document
+import org.jsoup.nodes.Element
 import java.lang.Exception
 
 class Animeav1Provider : MainAPI() {
-    companion object {
-        fun getType(t: String): TvType {
-            return if (t.contains("OVA", ignoreCase = true) || t.contains("Especial", ignoreCase = true)) TvType.OVA
-            else if (t.contains("Película", ignoreCase = true) || t.contains("Movie", ignoreCase = true)) TvType.AnimeMovie
-            else TvType.Anime
-        }
-    }
-
     override var mainUrl = "https://animeav1.com"
-    override var name = "AnimeAV1"
+    override var name = "Sub_AnimeAV1"
     override var lang = "es"
     override val hasMainPage = true
     override val hasChromecastSupport = true
@@ -38,22 +30,27 @@ class Animeav1Provider : MainAPI() {
         "catalogo?genre=shounen" to "Shounen",
         "catalogo?genre=ecchi" to "Ecchi",
     )
+
+    private fun Element.toSearchResult(): SearchResponse? {
+        val title = this.selectFirst("h3, .title") ?: this.selectFirst("a > p") ?: this.selectFirst("p")
+        val titleText = title?.text() ?: this.selectFirst("img")?.attr("alt") ?: return null
+        
+        val href = this.selectFirst("a")?.attr("href") ?: this.attr("href") ?: return null
+        val poster = this.selectFirst("img")?.attr("src")
+
+        return newAnimeSearchResponse(titleText, fixUrl(href)) {
+            this.posterUrl = fixUrl(poster ?: "")
+        }
+    }
     
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val items = ArrayList<HomePageList>()
         
         try {
             val doc = app.get(mainUrl).document
-            val latestEpisodes = doc.select("div.grid article, .latest-episodes a").mapNotNull {
-                val title = it.selectFirst("h3, .title")?.text() ?: return@mapNotNull null
-                val poster = it.selectFirst("img")?.attr("src") ?: return@mapNotNull null
-                val href = it.selectFirst("a")?.attr("href") ?: it.attr("href") ?: return@mapNotNull null
-                
-                newAnimeSearchResponse(title, fixUrl(href)) {
-                    this.posterUrl = fixUrl(poster)
-                }
+            val latestEpisodes = doc.select("div.grid article, .latest-episodes a, ul.directorio li article").mapNotNull { 
+                it.toSearchResult() 
             }
-            
             if (latestEpisodes.isNotEmpty()) {
                 items.add(HomePageList("Últimos Episodios", latestEpisodes, true))
             }
@@ -61,23 +58,30 @@ class Animeav1Provider : MainAPI() {
             e.printStackTrace()
         }
 
-        return newHomePageResponse(items, false)
+        try {
+            val url = if (page <= 1) "$mainUrl/${request.data}" else "$mainUrl/${request.data}&page=$page"
+            val doc = app.get(url).document
+            val categoryItems = doc.select("div.grid article, article, ul.directorio li article").mapNotNull { 
+                it.toSearchResult() 
+            }
+            if (categoryItems.isNotEmpty()) {
+                items.add(HomePageList(request.name, categoryItems, false))
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        return newHomePageResponse(items)
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
         val searchResults = mutableListOf<SearchResponse>()
         try {
             val doc = app.get("$mainUrl/?search=$query").document
-            doc.select("div.grid article, .search-results a").forEach { element ->
-                val title = element.selectFirst("h3, .title")?.text() ?: return@forEach
-                val poster = element.selectFirst("img")?.attr("src") ?: ""
-                val href = element.selectFirst("a")?.attr("href") ?: element.attr("href") ?: ""
-                if (href.isNotEmpty()) {
-                    searchResults.add(
-                        newAnimeSearchResponse(title, fixUrl(href)) {
-                            this.posterUrl = fixUrl(poster)
-                        }
-                    )
+            doc.select("div.grid article, .search-results a, ul.directorio li article, article").forEach { element ->
+                val result = element.toSearchResult()
+                if (result != null) {
+                    searchResults.add(result)
                 }
             }
         } catch (e: Exception) {
@@ -90,9 +94,10 @@ class Animeav1Provider : MainAPI() {
         val doc = app.get(url).document
         val episodes = ArrayList<Episode>()
         val title = doc.selectFirst("h1")?.text() ?: ""
-        val poster = doc.selectFirst("img.poster, div.cover img")?.attr("src") ?: ""
-        val description = doc.selectFirst("p.synopsis, div.description p")?.text()
-        doc.select("a[href*=/media/]").forEach { epLink ->
+        val poster = doc.selectFirst("img.poster, div.cover img, .portada img")?.attr("src") ?: ""
+        val description = doc.selectFirst("p.synopsis, div.description p, .sinopsis")?.text()
+        
+        doc.select("a[href*=/media/], ul#eps li > a").forEach { epLink ->
             val epUrl = epLink.attr("href")
             val epNum = epUrl.trimEnd('/').substringAfterLast("/").toIntOrNull()
             if (epNum != null) {
@@ -104,10 +109,22 @@ class Animeav1Provider : MainAPI() {
                 )
             }
         }
+        
         val sortedEpisodes = episodes.distinctBy { it.episode }.sortedBy { it.episode }
-        return newAnimeLoadResponse(title, url, getType(title)) {
+        
+        if (sortedEpisodes.isEmpty()) {
+            val slug = url.trimEnd('/').substringAfterLast("/")
+            episodes.add(
+                newEpisode("$mainUrl/ver/$slug-1") {
+                    this.name = "Episodio 1"
+                    this.episode = 1
+                }
+            )
+        }
+
+        return newAnimeLoadResponse(title, url, TvType.Anime) {
             this.posterUrl = fixUrl(poster)
-            addEpisodes(DubStatus.Subbed, sortedEpisodes)
+            addEpisodes(DubStatus.Subbed, if (sortedEpisodes.isNotEmpty()) sortedEpisodes else episodes)
             this.plot = description
         }
     }
@@ -120,17 +137,27 @@ class Animeav1Provider : MainAPI() {
     ): Boolean {
         try {
             val doc = app.get(data).document
-            val defaultIframe = doc.selectFirst("iframe[title='Episodio Embebido'], iframe.aspect-video")?.attr("src")
+            val defaultIframe = doc.selectFirst("iframe[title='Episodio Embebido'], iframe.aspect-video, #iframe-element, .video-player iframe")?.attr("src")
             if (!defaultIframe.isNullOrBlank()) {
                 loadExtractor(fixUrl(defaultIframe), data, subtitleCallback, callback)
             }
             
-            val serverButtons = doc.select("div.flex-1.flex-wrap button, button.btn")
+            val serverButtons = doc.select("div.flex-1.flex-wrap button, button.btn, .descargas a")
             serverButtons.forEach { button ->
-                val alternativeUrl = button.attr("data-src").ifBlank { button.attr("data-video") }
-                
-                if (alternativeUrl.isNotBlank()) {
-                    loadExtractor(fixUrl(alternativeUrl), data, subtitleCallback, callback)
+                val src = if (button.tagName() == "a") button.attr("href") else button.attr("data-src").ifBlank { button.attr("data-video") }
+                if (!src.isNullOrBlank()) {
+                    val fixedSrc = fixUrl(src)
+                    if (fixedSrc.contains("redirect.php?id=")) {
+                        val realUrl = fixedSrc.substringAfter("id=")
+                        if (realUrl.startsWith("http")) {
+                            loadExtractor(realUrl, data, subtitleCallback, callback)
+                        }
+                    } else if (fixedSrc.startsWith("http") && 
+                        !fixedSrc.contains("google") && 
+                        !fixedSrc.contains("facebook") &&
+                        !fixedSrc.contains("mirror_direct")) {
+                        loadExtractor(fixedSrc, data, subtitleCallback, callback)
+                    }
                 }
             }
         } catch (e: Exception) {
