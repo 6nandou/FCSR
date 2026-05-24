@@ -6,7 +6,7 @@ import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import org.jsoup.nodes.Element
 
-class IronHentaiProvider : MainAPI() {
+class IronHProvider : MainAPI() {
     override var mainUrl = "https://ironhentai.com"
     override var name = "IronHentai"
     override var lang = "es"
