@@ -8,7 +8,7 @@ import java.lang.Exception
 
 class Animeav1Provider : MainAPI() {
     override var mainUrl = "https://animeav1.com"
-    override var name = "Sub_AnimeAV1"
+    override var name = "AnimeAV1"
     override var lang = "es"
     override val hasMainPage = true
     override val hasChromecastSupport = true
@@ -32,43 +32,53 @@ class Animeav1Provider : MainAPI() {
     )
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val title = this.selectFirst("h3, .title") ?: this.selectFirst("a > p") ?: this.selectFirst("p")
-        val titleText = title?.text() ?: this.selectFirst("img")?.attr("alt") ?: return null
+        val titleElement = this.selectFirst("h3, .title, p.title, a > p, p")
+        var titleText = titleElement?.text()?.trim() ?: ""
+        
+        if (titleText.isBlank() || titleText.equals("backdrop", ignoreCase = true)) {
+            titleText = this.selectFirst("img")?.attr("alt")?.trim() ?: ""
+        }
+        
+        if (titleText.isBlank() || titleText.equals("backdrop", ignoreCase = true)) {
+            return null
+        }
         
         val href = this.selectFirst("a")?.attr("href") ?: this.attr("href") ?: return null
-        val poster = this.selectFirst("img")?.attr("src")
+        val poster = this.selectFirst("img")?.attr("src") ?: return null
 
         return newAnimeSearchResponse(titleText, fixUrl(href)) {
-            this.posterUrl = fixUrl(poster ?: "")
+            this.posterUrl = fixUrl(poster)
         }
     }
     
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val items = ArrayList<HomePageList>()
         
-        try {
-            val doc = app.get(mainUrl).document
-            val latestEpisodes = doc.select("div.grid article, .latest-episodes a, ul.directorio li article").mapNotNull { 
-                it.toSearchResult() 
+        if (request.data.isBlank()) {
+            try {
+                val doc = app.get(mainUrl).document
+                val latestEpisodes = doc.select("main div.grid article, section div.grid article, .latest-episodes a").mapNotNull { 
+                    it.toSearchResult() 
+                }
+                if (latestEpisodes.isNotEmpty()) {
+                    items.add(HomePageList("Últimos Episodios", latestEpisodes, true))
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-            if (latestEpisodes.isNotEmpty()) {
-                items.add(HomePageList("Últimos Episodios", latestEpisodes, true))
+        } else {
+            try {
+                val url = if (page <= 1) "$mainUrl/${request.data}" else "$mainUrl/${request.data}&page=$page"
+                val doc = app.get(url).document
+                val categoryItems = doc.select("div.grid article, article").mapNotNull { 
+                    it.toSearchResult() 
+                }
+                if (categoryItems.isNotEmpty()) {
+                    items.add(HomePageList(request.name, categoryItems, false))
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
-        try {
-            val url = if (page <= 1) "$mainUrl/${request.data}" else "$mainUrl/${request.data}&page=$page"
-            val doc = app.get(url).document
-            val categoryItems = doc.select("div.grid article, article, ul.directorio li article").mapNotNull { 
-                it.toSearchResult() 
-            }
-            if (categoryItems.isNotEmpty()) {
-                items.add(HomePageList(request.name, categoryItems, false))
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
 
         return newHomePageResponse(items)
@@ -78,7 +88,7 @@ class Animeav1Provider : MainAPI() {
         val searchResults = mutableListOf<SearchResponse>()
         try {
             val doc = app.get("$mainUrl/catalogo?search=$query").document
-            doc.select("div.grid article, .search-results a, ul.directorio li article, article").forEach { element ->
+            doc.select("div.grid article, article").forEach { element ->
                 val result = element.toSearchResult()
                 if (result != null) {
                     searchResults.add(result)
