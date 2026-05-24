@@ -68,8 +68,8 @@ subprojects {
     }
 
     dependencies {
-        val apk = configurations.findByName("apk") ?: configurations.create("apk")
-        val implementation = configurations.getByName("implementation")
+        val apk by configurations
+        val implementation by configurations
 
         apk("com.lagradost:cloudstream3:pre-release")
 
@@ -80,4 +80,8 @@ subprojects {
         implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
         implementation("org.mozilla:rhino:1.7.14")
     }
+}
+
+task<Delete>("clean") {
+    delete(layout.buildDirectory)
 }
