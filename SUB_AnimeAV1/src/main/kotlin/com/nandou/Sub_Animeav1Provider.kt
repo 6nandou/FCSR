@@ -110,7 +110,7 @@ class Animeav1Provider : MainAPI() {
         val slug = url.trimEnd('/').substringAfterLast("/")
         
         var totalEpisodesDetected = 0
-        val countRegex = Regex(""""episodes_count"\s*:\s*(\d+)""")
+        val countRegex = Regex("""(?:episodes_count|episodesCount)"?\s*[:=]\s*(\d+)""")
         
         doc.select("script").forEach { script ->
             val scriptData = script.data()
