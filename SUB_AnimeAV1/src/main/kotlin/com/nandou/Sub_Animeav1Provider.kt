@@ -8,7 +8,7 @@ import java.lang.Exception
 
 class Animeav1Provider : MainAPI() {
     override var mainUrl = "https://animeav1.com"
-    override var name = "AnimeAV1"
+    override var name = "Sub_AnimeAV1"
     override var lang = "es"
     override val hasMainPage = true
     override val hasChromecastSupport = true
@@ -147,27 +147,28 @@ class Animeav1Provider : MainAPI() {
     ): Boolean {
         try {
             val doc = app.get(data).document
-            val defaultIframe = doc.selectFirst("iframe[title='Episodio Embebido'], iframe.aspect-video, #iframe-element, .video-player iframe")?.attr("src")
-            if (!defaultIframe.isNullOrBlank()) {
-                loadExtractor(fixUrl(defaultIframe), data, subtitleCallback, callback)
-            }
+            val downloadLinks = doc.select("div[data-dialog-content] a[href], div[role='dialog'] a[href], a.btn-soft[href]")
             
-            val serverButtons = doc.select("div.flex-1.flex-wrap button, button.btn, .descargas a")
-            serverButtons.forEach { button ->
-                val src = if (button.tagName() == "a") button.attr("href") else button.attr("data-src").ifBlank { button.attr("data-video") }
-                if (!src.isNullOrBlank()) {
-                    val fixedSrc = fixUrl(src)
-                    if (fixedSrc.contains("redirect.php?id=")) {
-                        val realUrl = fixedSrc.substringAfter("id=")
-                        if (realUrl.startsWith("http")) {
-                            loadExtractor(realUrl, data, subtitleCallback, callback)
+            if (downloadLinks.isNotEmpty()) {
+                downloadLinks.forEach { link ->
+                    val typeBadge = link.select("span").text()
+                    if (typeBadge.contains("SUB")) {
+                        val src = link.attr("href")
+                        if (src.isNotBlank()) {
+                            val fixedSrc = fixUrl(src)
+                            if (fixedSrc.startsWith("http") && 
+                                !fixedSrc.contains("google") && 
+                                !fixedSrc.contains("facebook") &&
+                                !fixedSrc.contains("mirror_direct")) {
+                                loadExtractor(fixedSrc, data, subtitleCallback, callback)
+                            }
                         }
-                    } else if (fixedSrc.startsWith("http") && 
-                        !fixedSrc.contains("google") && 
-                        !fixedSrc.contains("facebook") &&
-                        !fixedSrc.contains("mirror_direct")) {
-                        loadExtractor(fixedSrc, data, subtitleCallback, callback)
                     }
+                }
+            } else {
+                val defaultIframe = doc.selectFirst("iframe[title='Episodio Embebido'], iframe.aspect-video, #iframe-element, .video-player iframe")?.attr("src")
+                if (!defaultIframe.isNullOrBlank()) {
+                    loadExtractor(fixUrl(defaultIframe), data, subtitleCallback, callback)
                 }
             }
         } catch (e: Exception) {
