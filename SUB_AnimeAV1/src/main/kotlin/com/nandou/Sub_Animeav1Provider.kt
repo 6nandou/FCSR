@@ -8,7 +8,7 @@ import java.lang.Exception
 
 class Animeav1Provider : MainAPI() {
     override var mainUrl = "https://animeav1.com"
-    override var name = "Sub_AnimeAV1"
+    override var name = "AnimeAV1"
     override var lang = "es"
     override val hasMainPage = true
     override val hasChromecastSupport = true
@@ -107,13 +107,54 @@ class Animeav1Provider : MainAPI() {
         val poster = doc.selectFirst("img.poster, div.cover img, .portada img")?.attr("src") ?: ""
         val description = doc.selectFirst("p.synopsis, div.description p, .sinopsis")?.text()
         
-        val epRegex = Regex("""/media/[^\s"'\\]+""")
+        val slug = url.trimEnd('/').substringAfterLast("/")
+        
+        var totalEpisodesDetected = 0
+        val countRegex = Regex(""""episodes_count"\s*:\s*(\d+)""")
         
         doc.select("script").forEach { script ->
             val scriptData = script.data()
-            if (scriptData.contains("/media/")) {
-                epRegex.findAll(scriptData).forEach { match ->
-                    val epUrl = match.value
+            val match = countRegex.find(scriptData)
+            if (match != null) {
+                totalEpisodesDetected = match.groupValues[1].toIntOrNull() ?: 0
+            }
+        }
+
+        if (totalEpisodesDetected > 0) {
+            for (i in 1..totalEpisodesDetected) {
+                episodes.add(
+                    newEpisode("$mainUrl/ver/$slug-$i") {
+                        this.episode = i
+                        this.name = "Episodio $i"
+                    }
+                )
+            }
+        } else {
+            val epRegex = Regex("""/media/[^\s"'\\]+""")
+            doc.select("script").forEach { script ->
+                val scriptData = script.data()
+                if (scriptData.contains("/media/")) {
+                    epRegex.findAll(scriptData).forEach { match ->
+                        val epUrl = match.value
+                        val epNum = epUrl.trimEnd('/').substringAfterLast("/").toIntOrNull()
+                        if (epNum != null) {
+                            val isDuplicate = episodes.any { it.episode == epNum }
+                            if (!isDuplicate) {
+                                episodes.add(
+                                    newEpisode(fixUrl(epUrl)) {
+                                        this.episode = epNum
+                                        this.name = "Episodio $epNum"
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (episodes.isEmpty()) {
+                doc.select("a[href*=/media/], ul#eps li > a").forEach { epLink ->
+                    val epUrl = epLink.attr("href")
                     val epNum = epUrl.trimEnd('/').substringAfterLast("/").toIntOrNull()
                     if (epNum != null) {
                         val isDuplicate = episodes.any { it.episode == epNum }
@@ -129,29 +170,10 @@ class Animeav1Provider : MainAPI() {
                 }
             }
         }
-
-        if (episodes.isEmpty()) {
-            doc.select("a[href*=/media/], ul#eps li > a").forEach { epLink ->
-                val epUrl = epLink.attr("href")
-                val epNum = epUrl.trimEnd('/').substringAfterLast("/").toIntOrNull()
-                if (epNum != null) {
-                    val isDuplicate = episodes.any { it.episode == epNum }
-                    if (!isDuplicate) {
-                        episodes.add(
-                            newEpisode(fixUrl(epUrl)) {
-                                this.episode = epNum
-                                    this.name = "Episodio $epNum"
-                            }
-                        )
-                    }
-                }
-            }
-        }
         
         val sortedEpisodes = episodes.distinctBy { it.episode }.sortedBy { it.episode }
         
         if (sortedEpisodes.isEmpty()) {
-            val slug = url.trimEnd('/').substringAfterLast("/")
             episodes.add(
                 newEpisode("$mainUrl/ver/$slug-1") {
                     this.name = "Episodio 1"
